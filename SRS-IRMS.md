@@ -7,12 +7,14 @@
 | Field | Value |
 |---|---|
 | Document Type | Software Requirements Specification |
-| Version | 1.0 (Draft for Development) |
+| Version | 1.1 (Draft for Development — Go + Vite stack) |
 | Audience | Development Team (Backend, Frontend, QA, DevOps) |
 | Domain | Process Safety / Risk Engineering |
 | Status | Ready for Implementation |
 
 > **Catatan buat tim dev:** Dokumen ini ditulis agar bisa langsung dipakai sebagai acuan coding. Setiap modul punya *functional requirements*, *business rules*, *acceptance criteria*, dan *data model* yang cukup untuk di-implement tanpa banyak asumsi. Domain ini (*process safety*) bukan CRUD biasa—baca **Section 2 (Domain Primer)** dulu sebelum coding.
+>
+> **Versi 1.1 note:** Stack diubah dari NestJS + Next.js ke **Go (Fiber) + Vite.js + React**. Domain logic, business rules, data model, dan arsitektur layered tetap sama — yang berubah hanya tooling, library spesifik, dan gaya implementasi.
 
 ---
 
@@ -256,7 +258,7 @@ Ini **yang paling penting** untuk dev team pahami:
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│                    Client (Next.js SPA)                       │
+│              Client (Vite + React 18 SPA)                     │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐   │
 │  │ HAZOP Module │  │ BowTie Canvas│  │ Dashboard/Reports │   │
 │  └──────┬───────┘  └───────┬──────┘  └────────┬─────────┘   │
@@ -264,7 +266,8 @@ Ini **yang paling penting** untuk dev team pahami:
           │                  │                   │
           ▼                  ▼                   ▼
 ┌──────────────────────────────────────────────────────────────┐
-│                 API Gateway (NestJS REST + WS)                │
+│          API Gateway — Go (Fiber v2) REST + WebSocket         │
+│          Middleware: JWT, RBAC, CORS, Rate Limit, Logger      │
 └──────────────────────────────────────────────────────────────┘
           │                  │                   │
 ┌─────────▼────────┐ ┌───────▼──────┐ ┌──────────▼──────────┐
@@ -274,31 +277,101 @@ Ini **yang paling penting** untuk dev team pahami:
           │                  │                   │
           ▼                  ▼                   ▼
 ┌──────────────────────────────────────────────────────────────┐
-│         PostgreSQL (Primary DB)     +     Redis (Cache)       │
+│         PostgreSQL 15+ (Primary DB)   +   Redis (Cache)       │
+│         Access via GORM v2 (atau sqlc untuk raw query)        │
 └──────────────────────────────────────────────────────────────┘
-          │
-          ▼
-┌──────────────────────────────────────────────────────────────┐
-│   S3-compatible Storage (file uploads, report artifacts)      │
-└──────────────────────────────────────────────────────────────┘
+          │                            │
+          ▼                            ▼
+┌────────────────────────┐ ┌──────────────────────────────────┐
+│ S3-compatible Storage  │ │ Async Worker — asynq (Redis)     │
+│ (report, attachment)   │ │ (report gen, bulk import, email) │
+└────────────────────────┘ └──────────────────────────────────┘
 ```
 
-### 5.2 Layered Design (Backend)
+### 5.2 Layered Design (Backend — Clean Architecture)
 
 ```
-┌─────────────────────────────────────┐
-│  Presentation Layer (Controllers)    │  ← REST API endpoints
-├─────────────────────────────────────┤
-│  Application Layer (Services)        │  ← Business workflows
-├─────────────────────────────────────┤
-│  Domain Layer (Entities + Rules)     │  ← HAZOP, BowTie, Mapping
-├─────────────────────────────────────┤
-│  Infrastructure Layer (Repositories) │  ← DB, External APIs
-└─────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│  Delivery Layer (internal/delivery/http)                 │  ← Fiber handlers
+│  - HTTP handlers, WebSocket handlers, DTOs, validation   │
+├─────────────────────────────────────────────────────────┤
+│  Usecase / Application Layer (internal/usecase)          │  ← Business workflows
+│  - Orchestrate domain services, transaction boundaries   │
+├─────────────────────────────────────────────────────────┤
+│  Domain Layer (internal/domain)                          │  ← HAZOP, BowTie, Mapping
+│  - Entities, value objects, domain services, interfaces  │
+├─────────────────────────────────────────────────────────┤
+│  Infrastructure Layer (internal/infra)                   │  ← External concerns
+│  - GORM repos, Redis client, S3 client, email, queue     │
+└─────────────────────────────────────────────────────────┘
 ```
 
-> **Design principle:** Letakkan semua business rules di Domain Layer. Jangan taruh logic di Controller atau Service saja—domain ini kompleks dan akan di-unit test secara terpisah.
+> **Design principle:** Letakkan semua business rules di Domain Layer. Jangan taruh logic di handler atau usecase saja — domain ini kompleks dan akan di-unit test secara terpisah tanpa butuh DB.
 
+### 5.3 Recommended Backend Folder Structure
+
+```
+irms-backend/
+├── cmd/
+│   ├── api/              # main.go untuk HTTP API server
+│   └── worker/           # main.go untuk async worker (asynq)
+├── internal/
+│   ├── domain/           # Entities, domain services, interfaces (ports)
+│   │   ├── hazop/
+│   │   ├── bowtie/
+│   │   ├── mapping/
+│   │   ├── risk/
+│   │   └── user/
+│   ├── usecase/          # Application services, orchestration
+│   ├── delivery/
+│   │   ├── http/         # Fiber handlers, DTO, middleware
+│   │   └── ws/           # WebSocket handlers (Phase 2)
+│   ├── infra/
+│   │   ├── postgres/     # GORM repos — implement domain interfaces
+│   │   ├── redis/
+│   │   ├── s3/
+│   │   ├── email/
+│   │   └── queue/        # asynq task definitions
+│   └── pkg/              # Shared utilities
+│       ├── auth/         # JWT helpers
+│       ├── logger/       # zap wrapper
+│       ├── validator/    # go-playground/validator wrapper
+│       └── config/       # viper loader
+├── migrations/           # SQL migration files (golang-migrate)
+├── scripts/
+├── api/                  # OpenAPI specs (optional)
+├── go.mod
+├── go.sum
+├── Dockerfile
+└── docker-compose.yml
+```
+
+### 5.4 Recommended Frontend Folder Structure
+
+```
+irms-frontend/
+├── public/
+├── src/
+│   ├── app/              # App shell, providers, router setup
+│   ├── pages/            # Route-level components (HAZOP, BowTie, Dashboard)
+│   ├── features/         # Feature modules (colocated hooks, components, API)
+│   │   ├── hazop/
+│   │   ├── bowtie/
+│   │   ├── auth/
+│   │   ├── project/
+│   │   └── action/
+│   ├── components/       # Shared UI components (shadcn/ui-based)
+│   ├── hooks/
+│   ├── lib/              # api client (ky/axios), utils, constants
+│   ├── stores/           # Zustand stores
+│   ├── types/            # Shared TS types (mirror backend DTO)
+│   └── main.tsx
+├── index.html
+├── vite.config.ts
+├── tailwind.config.ts
+├── tsconfig.json
+└── package.json
+```
 
 ---
 
@@ -307,7 +380,7 @@ Ini **yang paling penting** untuk dev team pahami:
 ### Module 1: Authentication & User Management
 
 #### 6.1.1 Description
-Sistem autentikasi berbasis JWT dengan *refresh token* dan *role-based access control* (RBAC).
+Sistem autentikasi berbasis JWT dengan *refresh token* dan *role-based access control* (RBAC). Di Go, JWT dihandle via `github.com/golang-jwt/jwt/v5`; RBAC enforced via middleware Fiber.
 
 #### 6.1.2 Functional Requirements
 
@@ -319,7 +392,7 @@ Sistem autentikasi berbasis JWT dengan *refresh token* dan *role-based access co
 **FR-AUTH-002: Login**
 - Input: email + password.
 - Output: access token (15 min) + refresh token (7 days).
-- Lockout: 5 failed attempts → akun terkunci 15 menit.
+- Lockout: 5 failed attempts → akun terkunci 15 menit (counter disimpan di Redis dengan TTL).
 
 **FR-AUTH-003: Role Assignment**
 - Setiap user punya 1 *organization-level role* (Admin, Manager).
@@ -327,11 +400,11 @@ Sistem autentikasi berbasis JWT dengan *refresh token* dan *role-based access co
 
 **FR-AUTH-004: Session Management**
 - Token refresh endpoint.
-- Logout invalidates refresh token (store in blacklist / Redis).
+- Logout invalidates refresh token (blacklist JTI di Redis dengan TTL = sisa masa berlaku token).
 
 #### 6.1.3 Acceptance Criteria
-- [ ] User tidak bisa akses endpoint tanpa valid JWT.
-- [ ] Role-based guard memblokir akses ke endpoint yang tidak diizinkan (return 403).
+- [ ] User tidak bisa akses endpoint tanpa valid JWT (middleware `AuthRequired()` menolak dengan 401).
+- [ ] Role-based middleware (`RequireRole("admin")`) memblokir akses ke endpoint yang tidak diizinkan (return 403).
 - [ ] Audit log mencatat setiap login, logout, dan failed attempt.
 
 ---
@@ -355,12 +428,12 @@ Organization
 **FR-PROJ-001: Create Project**
 - Required fields: `name`, `code`, `facility_type`, `start_date`, `end_date`.
 - Optional: `description`, `location`, `client_name`.
-- System auto-generate `project_id` (UUID).
+- System auto-generate `project_id` (UUID via `github.com/google/uuid`).
 
 **FR-PROJ-002: Asset Hierarchy CRUD**
 - User dapat create/read/update/delete entitas pada setiap level hirarki.
-- Validation: tidak bisa delete parent jika masih ada child.
-- Soft delete (flag `deleted_at`), bukan hard delete.
+- Validation: tidak bisa delete parent jika masih ada child (enforce di usecase layer).
+- Soft delete (flag `deleted_at`), bukan hard delete. GORM `gorm.DeletedAt` cocok untuk ini.
 
 **FR-PROJ-003: Node Management**
 - Node adalah unit terkecil untuk HAZOP analysis.
@@ -383,7 +456,7 @@ Organization
 > **Prioritas #1** untuk development. Ini jantung sistem.
 
 #### 6.3.1 Description
-Modul untuk conduct HAZOP session. UI utamanya adalah **worksheet table** (mirip spreadsheet) dengan kolom yang sesuai standar industri.
+Modul untuk conduct HAZOP session. UI utamanya adalah **worksheet table** (mirip spreadsheet) dengan kolom yang sesuai standar industri. Frontend pakai TanStack Table + virtualization untuk handle 1000+ rows tanpa lag.
 
 #### 6.3.2 Worksheet Columns (Standard)
 
@@ -417,13 +490,13 @@ Modul untuk conduct HAZOP session. UI utamanya adalah **worksheet table** (mirip
 - Auto-suggest Deviation berdasarkan kombinasi Parameter + Guide Word.
   - Example: "Flow" + "No" → suggest "No Flow"
   - Example: "Temperature" + "More" → suggest "More Temperature / High Temperature"
-- Auto-calculate Risk Rank (Initial & Residual).
+- Auto-calculate Risk Rank (Initial & Residual) — kalkulasi dilakukan di server (Go), bukan client.
 
 **FR-HAZOP-002: Bulk Operations**
 - Copy row / duplicate row.
 - Move row (re-order).
 - Filter row by: Node, Guide Word, Risk Rank, Status.
-- Export filtered view ke Excel.
+- Export filtered view ke Excel (pakai `github.com/xuri/excelize/v2` di backend).
 
 **FR-HAZOP-003: Library Integration**
 - Saat input *Cause*, *Consequence*, *Safeguard* — system menampilkan *autocomplete* dari library organisasi.
@@ -438,12 +511,13 @@ Modul untuk conduct HAZOP session. UI utamanya adalah **worksheet table** (mirip
 **FR-HAZOP-005: Session Mode**
 - Ada mode "Workshop" dengan UI yang lebih besar/presenter-friendly.
 - Scribe mengisi sambil leader dan tim diskusi.
-- (Phase 2) Real-time collaboration via WebSocket.
+- (Phase 2) Real-time collaboration via WebSocket (Fiber native WebSocket support via `github.com/gofiber/contrib/websocket`).
 
 **FR-HAZOP-006: Validation Rules**
 - Row tidak bisa di-save jika: Node kosong, Parameter kosong, Guide Word kosong, Deviation kosong, Cause kosong, Consequence kosong, S & L Initial kosong.
 - Warning (bukan error) jika: Safeguard kosong tapi Risk Rank Initial ≥ High.
 - Error jika: Risk Rank Residual > Risk Rank Initial (logic error, tidak mungkin).
+- Server-side validation via `go-playground/validator`; client-side validation via Zod (React Hook Form resolver).
 
 #### 6.3.4 Acceptance Criteria
 - [ ] User dapat input 100 rows worksheet tanpa page reload, tanpa lag (<200ms per save).
@@ -478,7 +552,7 @@ Konfigurasi dan aplikasi risk matrix untuk menilai setiap skenario risiko.
 **FR-RISK-003: Risk Calculation**
 - Risk Rank = Severity × Likelihood.
 - Mapping ke cell di matrix → return label & color.
-- Calculation deterministic dan dilakukan server-side (tidak boleh manipulable client-side).
+- Calculation deterministic dan dilakukan server-side (di domain service Go), tidak boleh manipulable client-side.
 
 **FR-RISK-004: Tolerability Threshold**
 - Admin set threshold: "Risk level X requires action".
@@ -487,14 +561,14 @@ Konfigurasi dan aplikasi risk matrix untuk menilai setiap skenario risiko.
 #### 6.4.3 Acceptance Criteria
 - [ ] Risk rank kalkulasi konsisten antara initial dan residual.
 - [ ] Matrix dapat di-export sebagai gambar untuk report.
-- [ ] Ganti matrix active tidak merusak data existing (historical calculation preserved).
+- [ ] Ganti matrix active tidak merusak data existing (historical calculation preserved via `risk_matrix_version`).
 
 ---
 
 ### Module 5: BowTie Visualization Module
 
 #### 6.5.1 Description
-Modul untuk membuat dan edit BowTie diagram. Auto-populate dari HAZOP data, dengan opsi manual editing.
+Modul untuk membuat dan edit BowTie diagram. Auto-populate dari HAZOP data, dengan opsi manual editing. Frontend pakai **React Flow v12+** (library canvas untuk graph/diagram yang solid & well-maintained).
 
 #### 6.5.2 Canvas Structure
 
@@ -518,12 +592,13 @@ Modul untuk membuat dan edit BowTie diagram. Auto-populate dari HAZOP data, deng
   - Map Safeguard (preventive) → Preventive Barrier.
   - Map Safeguard (mitigative) → Mitigative Barrier.
 - Classification preventive vs mitigative: default-nya based on `safeguard_type` field; user bisa override.
+- Generation dilakukan di backend (Go), hasil dikirim sebagai JSON untuk di-render React Flow.
 
 **FR-BOWTIE-002: Manual Editing**
-- Drag & drop untuk reposisi node.
+- Drag & drop untuk reposisi node (handled by React Flow).
 - Add/remove threat, consequence, barrier secara manual.
 - Edit label & tipe barrier.
-- Undo/redo (minimum 10 steps).
+- Undo/redo (minimum 10 steps) — pakai state history di Zustand.
 
 **FR-BOWTIE-003: Barrier Properties**
 - Tiap barrier punya properties:
@@ -544,14 +619,14 @@ Modul untuk membuat dan edit BowTie diagram. Auto-populate dari HAZOP data, deng
 - **Presentation Mode**: fullscreen, minim UI chrome.
 
 **FR-BOWTIE-006: Sync dengan HAZOP**
-- Jika HAZOP worksheet diubah, BowTie *auto-update flag* muncul.
+- Jika HAZOP worksheet diubah, BowTie *auto-update flag* muncul (server mengirim `last_synced_at` vs `last_modified_at`).
 - User decide: merge changes, atau keep manual edits.
 - Konflik resolution: UI diff view.
 
 #### 6.5.4 Acceptance Criteria
 - [ ] Auto-generate diagram dari HAZOP dalam <2 detik untuk node dengan <20 deviation.
 - [ ] Drag & drop smooth tanpa lag pada diagram dengan <100 nodes.
-- [ ] Export diagram ke PNG, SVG, dan PDF.
+- [ ] Export diagram ke PNG, SVG, dan PDF (PNG/SVG via `react-flow`'s `toPng`/`toSvg` helper; PDF via backend compose).
 - [ ] Edit di BowTie *tidak* meng-overwrite HAZOP data secara default (one-way sync by default).
 
 ---
@@ -561,7 +636,7 @@ Modul untuk membuat dan edit BowTie diagram. Auto-populate dari HAZOP data, deng
 > **Most complex module.** Implementasi salah di sini → sistem rusak secara fundamental.
 
 #### 6.6.1 Description
-Komponen backend yang menangani transformasi dan relasi antara HAZOP entities dan BowTie entities.
+Komponen backend (Go) yang menangani transformasi dan relasi antara HAZOP entities dan BowTie entities. Ditulis sebagai **pure domain service** tanpa dependency ke framework (Fiber/GORM) — supaya gampang di-unit test.
 
 #### 6.6.2 Mapping Rules
 
@@ -616,9 +691,8 @@ Alasan: HAZOP adalah dokumen engineering yang harus tetap jadi source of truth. 
 #### 6.6.4 Acceptance Criteria
 - [ ] Auto-generation untuk node dengan 20 deviation dan 50 cause < 3 detik.
 - [ ] Bidirectional traceability link bekerja di kedua arah.
-- [ ] Konflik sync tidak menyebabkan data loss (selalu ada snapshot sebelum merge).
-- [ ] Unit test coverage untuk mapping logic ≥ 90%.
-
+- [ ] Konflik sync tidak menyebabkan data loss (selalu ada snapshot sebelum merge, stored di `bowtie_snapshots`).
+- [ ] Unit test coverage untuk mapping logic ≥ 90% (via `go test -cover`).
 
 ---
 
@@ -635,17 +709,17 @@ Tracking item actionable yang muncul dari HAZOP (biasanya berupa rekomendasi pen
 
 **FR-ACTION-002: Lifecycle States**
 - States: `Open` → `In Progress` → `Under Review` → `Closed` / `Rejected`.
-- State transition dibatasi role:
+- State transition dibatasi role (enforced via domain service + middleware):
   - Engineer: Open → In Progress, In Progress → Under Review.
   - Manager/Leader: Under Review → Closed/Rejected.
 - Reject memerlukan `reason` (required field).
 
 **FR-ACTION-003: Notifications**
-- Email notification saat:
+- Email notification (via SMTP atau provider seperti SendGrid) saat:
   - Action di-assign ke user.
-  - Due date mendekati (H-3, H-1, overdue).
+  - Due date mendekati (H-3, H-1, overdue) — dijalankan oleh cron worker (asynq scheduler).
   - Status berubah.
-- In-app notification untuk hal yang sama.
+- In-app notification untuk hal yang sama (WebSocket push, Phase 2).
 
 **FR-ACTION-004: Dashboard View**
 - Kanban board: kolom per status.
@@ -685,7 +759,7 @@ Centralized library untuk reuse cause, consequence, safeguard, recommendation ac
 
 **FR-LIB-002: Autocomplete Integration**
 - Saat user type di HAZOP worksheet field Cause/Consequence/Safeguard, system suggest dari library.
-- Fuzzy matching pada `name` dan `keywords`.
+- Fuzzy matching pada `name` dan `keywords` — pakai PostgreSQL `pg_trgm` extension untuk similarity search, atau Redis-cached list untuk library kecil.
 
 **FR-LIB-003: Usage Tracking**
 - System track berapa kali tiap library entry dipakai.
@@ -696,7 +770,7 @@ Centralized library untuk reuse cause, consequence, safeguard, recommendation ac
 - Free-form tags untuk pencarian.
 
 #### 6.8.4 Acceptance Criteria
-- [ ] Autocomplete response <100ms untuk library dengan 10,000 entries.
+- [ ] Autocomplete response <100ms untuk library dengan 10,000 entries (caching Redis + index `pg_trgm`).
 - [ ] Entry yang dipakai di HAZOP tidak dapat di-hard-delete (soft delete dengan flag `archived`).
 - [ ] Import library dari CSV untuk bootstrap library organisasi.
 
@@ -733,17 +807,19 @@ Generate dokumen output standar industri untuk audit, compliance, dan komunikasi
 #### 6.9.3 Functional Requirements
 
 **FR-REPORT-001: Template Engine**
-- Use Handlebars atau similar templating.
-- Admin dapat upload custom template (DOCX with placeholders).
+- Go `text/template` atau `html/template` sebagai basis.
+- Untuk Excel: `github.com/xuri/excelize/v2`.
+- Untuk PDF: `github.com/jung-kurt/gofpdf` atau render HTML → PDF via headless Chrome (`chromedp`) untuk output yang lebih rapi.
+- Admin dapat upload custom template (DOCX with placeholders — gunakan `github.com/nguyenthenguyen/docx` atau serupa).
 - Template dapat berbeda per organisasi (white-label support).
 
 **FR-REPORT-002: Async Generation**
-- Report generation dilakukan di background job (Bull queue + Redis).
-- User mendapat notifikasi saat report siap.
-- Report disimpan di S3-compatible storage, link valid 7 hari.
+- Report generation dilakukan di background job via **asynq** (Redis-backed queue, equivalent BullMQ di ekosistem Go).
+- User mendapat notifikasi (email + in-app) saat report siap.
+- Report disimpan di S3-compatible storage, link valid 7 hari (signed URL).
 
 **FR-REPORT-003: Scheduled Reports**
-- User dapat schedule weekly/monthly report ke email tertentu.
+- User dapat schedule weekly/monthly report ke email tertentu — pakai asynq scheduler atau `robfig/cron`.
 
 #### 6.9.4 Acceptance Criteria
 - [ ] Report 100-page HAZOP generated dalam <30 detik.
@@ -761,7 +837,8 @@ Tracking semua perubahan dalam sistem untuk compliance (e.g., OSHA, ISO 45001 au
 
 **FR-AUDIT-001: Immutable Audit Log**
 - Every create/update/delete operation logged dengan: `user_id`, `timestamp`, `action`, `entity_type`, `entity_id`, `changes` (JSON diff), `ip_address`.
-- Log tidak dapat di-edit atau di-delete (append-only table).
+- Log tidak dapat di-edit atau di-delete (append-only table — enforce di DB level via trigger yang menolak UPDATE/DELETE).
+- Implementation: GORM hook `AfterCreate`/`AfterUpdate`/`AfterDelete` di domain entity → write ke `audit_logs`.
 
 **FR-AUDIT-002: Entity Versioning**
 - Entity kritis (HAZOP row, BowTie, Project) punya `version` counter.
@@ -844,13 +921,15 @@ Tracking semua perubahan dalam sistem untuk compliance (e.g., OSHA, ISO 45001 au
 
 ### 7.2 Primary Tables
 
+> Semua `id` pakai UUIDv7 (pakai `github.com/google/uuid` v1.6+ atau `github.com/gofrs/uuid`). UUIDv7 punya ordering temporal untuk indexing yang lebih baik dibanding UUIDv4.
+
 #### Table: `organizations`
 | Field | Type | Constraints |
 |---|---|---|
 | id | UUID | PK |
 | name | VARCHAR(255) | NOT NULL |
-| subscription_tier | ENUM | `free`, `pro`, `enterprise` |
-| created_at | TIMESTAMP | DEFAULT now() |
+| subscription_tier | VARCHAR(20) | `free`, `pro`, `enterprise` (CHECK constraint) |
+| created_at | TIMESTAMPTZ | DEFAULT now() |
 
 #### Table: `users`
 | Field | Type | Constraints |
@@ -858,12 +937,12 @@ Tracking semua perubahan dalam sistem untuk compliance (e.g., OSHA, ISO 45001 au
 | id | UUID | PK |
 | organization_id | UUID | FK → organizations |
 | email | VARCHAR(255) | UNIQUE, NOT NULL |
-| password_hash | VARCHAR(255) | NOT NULL |
+| password_hash | VARCHAR(255) | NOT NULL (bcrypt cost 12) |
 | full_name | VARCHAR(255) | NOT NULL |
-| role | ENUM | `admin`, `manager`, `engineer`, `viewer` |
-| status | ENUM | `active`, `suspended`, `invited` |
-| last_login_at | TIMESTAMP | NULLABLE |
-| created_at | TIMESTAMP | DEFAULT now() |
+| role | VARCHAR(20) | `admin`, `manager`, `engineer`, `viewer` |
+| status | VARCHAR(20) | `active`, `suspended`, `invited` |
+| last_login_at | TIMESTAMPTZ | NULLABLE |
+| created_at | TIMESTAMPTZ | DEFAULT now() |
 
 #### Table: `projects`
 | Field | Type | Constraints |
@@ -873,14 +952,14 @@ Tracking semua perubahan dalam sistem untuk compliance (e.g., OSHA, ISO 45001 au
 | code | VARCHAR(50) | UNIQUE per org |
 | name | VARCHAR(255) | NOT NULL |
 | facility_type | VARCHAR(100) | |
-| status | ENUM | `planning`, `active`, `completed`, `archived` |
+| status | VARCHAR(20) | `planning`, `active`, `completed`, `archived` |
 | start_date | DATE | |
 | end_date | DATE | |
 | risk_matrix_id | UUID | FK → risk_matrices |
 | guide_word_set_id | UUID | FK → guide_word_sets |
 | created_by | UUID | FK → users |
-| created_at | TIMESTAMP | DEFAULT now() |
-| deleted_at | TIMESTAMP | NULLABLE (soft delete) |
+| created_at | TIMESTAMPTZ | DEFAULT now() |
+| deleted_at | TIMESTAMPTZ | NULLABLE (GORM soft delete) |
 
 #### Table: `nodes`
 | Field | Type | Constraints |
@@ -893,7 +972,7 @@ Tracking semua perubahan dalam sistem untuk compliance (e.g., OSHA, ISO 45001 au
 | operating_conditions | JSONB | Temp, pressure, flow, etc. |
 | drawing_reference | VARCHAR(255) | P&ID number |
 | sequence_number | INT | For ordering |
-| created_at | TIMESTAMP | |
+| created_at | TIMESTAMPTZ | |
 
 #### Table: `deviations`
 | Field | Type | Constraints |
@@ -921,11 +1000,11 @@ Tracking semua perubahan dalam sistem untuk compliance (e.g., OSHA, ISO 45001 au
 | deviation_id | UUID | FK → deviations |
 | library_consequence_id | UUID | FK → library_consequences (nullable) |
 | description | TEXT | NOT NULL |
-| severity_initial | INT | 1-5 |
-| likelihood_initial | INT | 1-5 |
-| severity_residual | INT | NULLABLE |
-| likelihood_residual | INT | NULLABLE |
-| impact_categories | JSONB | `{people: 4, env: 3, asset: 2, reputation: 3}` |
+| severity_initial | SMALLINT | 1-5 (CHECK) |
+| likelihood_initial | SMALLINT | 1-5 (CHECK) |
+| severity_residual | SMALLINT | NULLABLE |
+| likelihood_residual | SMALLINT | NULLABLE |
+| impact_categories | JSONB | `{"people":4,"env":3,"asset":2,"reputation":3}` |
 
 #### Table: `safeguards`
 | Field | Type | Constraints |
@@ -933,10 +1012,10 @@ Tracking semua perubahan dalam sistem untuk compliance (e.g., OSHA, ISO 45001 au
 | id | UUID | PK |
 | library_safeguard_id | UUID | FK (nullable) |
 | description | TEXT | NOT NULL |
-| safeguard_type | ENUM | `preventive`, `mitigative`, `both` |
-| safeguard_function | ENUM | `prevention`, `detection`, `control`, `mitigation`, `emergency_response` |
-| category | ENUM | `hardware`, `procedure`, `human_action`, `software` |
-| effectiveness | ENUM | `weak`, `moderate`, `strong` (Phase 2) |
+| safeguard_type | VARCHAR(20) | `preventive`, `mitigative`, `both` |
+| safeguard_function | VARCHAR(30) | `prevention`, `detection`, `control`, `mitigation`, `emergency_response` |
+| category | VARCHAR(20) | `hardware`, `procedure`, `human_action`, `software` |
+| effectiveness | VARCHAR(20) | `weak`, `moderate`, `strong` (Phase 2) |
 
 #### Junction Table: `cause_safeguards`
 | Field | Type | Constraints |
@@ -957,12 +1036,12 @@ Tracking semua perubahan dalam sistem untuk compliance (e.g., OSHA, ISO 45001 au
 | id | UUID | PK |
 | deviation_id | UUID | FK → deviations |
 | description | TEXT | NOT NULL |
-| priority | ENUM | `low`, `medium`, `high`, `critical` |
+| priority | VARCHAR(20) | `low`, `medium`, `high`, `critical` |
 | assigned_to | UUID | FK → users |
 | due_date | DATE | |
-| status | ENUM | `open`, `in_progress`, `under_review`, `closed`, `rejected` |
+| status | VARCHAR(20) | `open`, `in_progress`, `under_review`, `closed`, `rejected` |
 | closure_evidence | TEXT | |
-| closed_at | TIMESTAMP | |
+| closed_at | TIMESTAMPTZ | |
 | closed_by | UUID | FK → users |
 
 #### Table: `bowtie_diagrams`
@@ -974,8 +1053,8 @@ Tracking semua perubahan dalam sistem untuk compliance (e.g., OSHA, ISO 45001 au
 | top_event | VARCHAR(500) | NOT NULL |
 | description | TEXT | |
 | layout_data | JSONB | Node positions, zoom, pan |
-| last_synced_at | TIMESTAMP | |
-| last_modified_at | TIMESTAMP | |
+| last_synced_at | TIMESTAMPTZ | |
+| last_modified_at | TIMESTAMPTZ | |
 | created_by | UUID | FK → users |
 
 #### Table: `bowtie_elements`
@@ -983,11 +1062,11 @@ Tracking semua perubahan dalam sistem untuk compliance (e.g., OSHA, ISO 45001 au
 |---|---|---|
 | id | UUID | PK |
 | diagram_id | UUID | FK → bowtie_diagrams |
-| element_type | ENUM | `threat`, `consequence`, `preventive_barrier`, `mitigative_barrier`, `escalation_factor`, `escalation_control` |
+| element_type | VARCHAR(30) | `threat`, `consequence`, `preventive_barrier`, `mitigative_barrier`, `escalation_factor`, `escalation_control` |
 | source_entity_type | VARCHAR(50) | e.g., `cause`, `consequence`, `safeguard` |
 | source_entity_id | UUID | Polymorphic FK |
 | label | VARCHAR(500) | |
-| position | JSONB | `{x, y}` |
+| position | JSONB | `{"x":..., "y":...}` |
 | properties | JSONB | Type-specific properties |
 | is_manual | BOOLEAN | true jika user-added, false jika auto-gen |
 
@@ -998,7 +1077,7 @@ Tracking semua perubahan dalam sistem untuk compliance (e.g., OSHA, ISO 45001 au
 | diagram_id | UUID | FK → bowtie_diagrams |
 | source_element_id | UUID | FK → bowtie_elements |
 | target_element_id | UUID | FK → bowtie_elements |
-| connection_type | ENUM | `threat_to_event`, `event_to_consequence`, `barrier_chain` |
+| connection_type | VARCHAR(30) | `threat_to_event`, `event_to_consequence`, `barrier_chain` |
 
 #### Table: `risk_matrices`
 | Field | Type | Constraints |
@@ -1006,7 +1085,7 @@ Tracking semua perubahan dalam sistem untuk compliance (e.g., OSHA, ISO 45001 au
 | id | UUID | PK |
 | organization_id | UUID | FK → organizations |
 | name | VARCHAR(255) | |
-| dimensions | JSONB | `{rows: 5, cols: 5}` |
+| dimensions | JSONB | `{"rows":5, "cols":5}` |
 | cells | JSONB | Array of `{row, col, label, color, action}` |
 | severity_definitions | JSONB | Per-level descriptions |
 | likelihood_definitions | JSONB | Per-level descriptions |
@@ -1030,20 +1109,21 @@ Tracking semua perubahan dalam sistem untuk compliance (e.g., OSHA, ISO 45001 au
 | entity_type | VARCHAR(100) | |
 | entity_id | UUID | |
 | changes | JSONB | Before/after diff |
-| ip_address | VARCHAR(45) | IPv4/IPv6 |
+| ip_address | INET | IPv4/IPv6 (Postgres `inet` type) |
 | user_agent | TEXT | |
-| created_at | TIMESTAMP | DEFAULT now() |
+| created_at | TIMESTAMPTZ | DEFAULT now() |
 
 ### 7.3 Indexing Strategy
 
-Critical indexes:
+Critical indexes (dibuat via migrasi SQL di `migrations/`):
 - `users(email)` — UNIQUE index for login.
-- `projects(organization_id, deleted_at)` — filter active projects.
+- `projects(organization_id, deleted_at)` — filter active projects per tenant.
 - `deviations(node_id)` — load HAZOP worksheet.
 - `causes(deviation_id)`, `consequences(deviation_id)` — worksheet population.
 - `audit_logs(entity_type, entity_id, created_at DESC)` — history lookup.
 - `recommendations(assigned_to, status)` — user dashboard.
 - `bowtie_elements(diagram_id, element_type)` — diagram rendering.
+- GIN index di `library_causes USING gin (name gin_trgm_ops)` — fuzzy autocomplete (butuh `CREATE EXTENSION pg_trgm`).
 
 ### 7.4 Multi-Tenancy Strategy
 
@@ -1051,22 +1131,45 @@ Critical indexes:
 
 - Setiap table yang berisi tenant data punya `organization_id`.
 - Setiap query di-filter `WHERE organization_id = :current_org`.
-- Enforce di Repository layer dengan `@TenantScoped` decorator / global query scope.
+- Enforce di Repository layer dengan GORM global scope / middleware yang inject `organization_id` ke context.
 
-> **CRITICAL:** Jangan pernah lupa tenant filter. Satu query salah → data bocor antar tenant. Consider `Row-Level Security` di PostgreSQL sebagai second layer.
+Contoh Go:
 
+```go
+func TenantScope(orgID uuid.UUID) func(db *gorm.DB) *gorm.DB {
+    return func(db *gorm.DB) *gorm.DB {
+        return db.Where("organization_id = ?", orgID)
+    }
+}
+
+// Usage in repo:
+db.Scopes(TenantScope(ctx.Value("org_id").(uuid.UUID))).Find(&projects)
+```
+
+> **CRITICAL:** Jangan pernah lupa tenant filter. Satu query salah → data bocor antar tenant. Consider **PostgreSQL Row-Level Security (RLS)** sebagai second layer — set `SET LOCAL app.current_org_id = '...'` di awal transaction, lalu enable RLS policy di setiap tenant table.
+
+### 7.5 ORM Strategy — GORM vs sqlc
+
+**Default: GORM v2** untuk CRUD standar (lebih cepat develop, hooks untuk audit log).
+
+**Pakai sqlc** untuk query yang:
+- Kompleks (multi-join, CTE, window function).
+- Performance-critical (mapping engine, dashboard aggregation).
+- Butuh type safety maksimal.
+
+Kombinasi ini common di project Go production-grade — GORM untuk 80% CRUD, sqlc untuk 20% hot path.
 
 ---
 
 ## 8. Business Rules & Domain Logic
 
-Bagian ini berisi *invariants* yang harus dijaga sistem. Melanggar rule di bawah = bug domain.
+Bagian ini berisi *invariants* yang harus dijaga sistem. Melanggar rule di bawah = bug domain. Rule-rule ini harus di-enforce di **domain layer Go**, bukan hanya di UI.
 
 ### 8.1 HAZOP Rules
 
 **BR-HAZOP-001:** Satu Deviation minimum punya 1 Cause dan 1 Consequence. Tidak boleh ada Deviation tanpa keduanya (soft-enforce di UI, hard-enforce saat submit).
 
-**BR-HAZOP-002:** Severity dan Likelihood adalah integer 1-5 (atau sesuai dimensi matrix yang aktif).
+**BR-HAZOP-002:** Severity dan Likelihood adalah integer 1-5 (atau sesuai dimensi matrix yang aktif). Validasi via `validator` tag: `validate:"min=1,max=5"`.
 
 **BR-HAZOP-003:** Risk Rank Residual ≤ Risk Rank Initial. Jika lebih besar = input error (safeguard tidak mungkin memperburuk risiko).
 
@@ -1119,7 +1222,7 @@ User bisa override manual, tapi system log perubahannya.
 
 **BR-ACCESS-002:** Organization Admin dapat akses semua project di organisasinya (bypass project-level assignment).
 
-**BR-ACCESS-003:** Super Admin (Anthropic-side / sistem provider) tidak dapat akses data customer (zero-trust). Support hanya dapat masuk dengan *impersonation token* yang valid <1 jam dan selalu ter-log.
+**BR-ACCESS-003:** Super Admin (sistem provider) tidak dapat akses data customer (zero-trust). Support hanya dapat masuk dengan *impersonation token* yang valid <1 jam dan selalu ter-log.
 
 ---
 
@@ -1137,69 +1240,77 @@ User bisa override manual, tapi system log perubahannya.
 | Concurrent users per project | 20+ | No degradation in response time |
 | Database size handling | 10M rows per tenant | Without re-architecture |
 
+> Go umumnya memberi p95 lebih agresif dibanding Node.js untuk beban ini. Target di atas adalah *upper bound*; realistis bisa lebih baik.
+
 ### 9.2 Scalability
 
 - Horizontal scaling: backend stateless, session di Redis.
-- Worker queue untuk task berat (report generation, bulk import).
-- Database: read replica untuk reporting queries.
+- Worker queue (asynq) untuk task berat (report generation, bulk import).
+- Database: read replica untuk reporting queries (Phase 2+).
+- Go compile ke single binary → deployment gampang (Docker image size < 30 MB dengan `scratch` base).
 
 ### 9.3 Availability
 
 - Target SLA: 99.5% uptime (Phase 1), 99.9% (Phase 2+).
 - Scheduled maintenance window: max 4 hours/month, di luar jam kerja customer.
-- Backup: daily automated, retention 30 hari. Point-in-time recovery capability.
+- Backup: daily automated via `pg_dump`, retention 30 hari. Point-in-time recovery capability (WAL archiving) di Phase 2.
+- Graceful shutdown: trap SIGTERM di `main.go`, drain in-flight request, close DB/Redis connection.
 
 ### 9.4 Security
 
 **Authentication:**
-- JWT dengan RS256 signing.
-- Refresh token di httpOnly cookie.
-- MFA (TOTP) optional Phase 1, wajib untuk Admin Phase 2.
+- JWT dengan RS256 signing (pakai `github.com/golang-jwt/jwt/v5`).
+- Access token di `Authorization: Bearer`, refresh token di httpOnly cookie.
+- MFA (TOTP) optional Phase 1 (pakai `github.com/pquerna/otp`), wajib untuk Admin Phase 2.
 
 **Authorization:**
-- RBAC di semua endpoint (decorator-based di NestJS).
-- Row-level security untuk tenant isolation.
+- RBAC di semua endpoint via **Fiber middleware** (`RequireRole`, `RequirePermission`).
+- Row-level security (PostgreSQL RLS) untuk tenant isolation (second layer selain filter di repo).
 
 **Data Protection:**
-- Password hashing: bcrypt (cost factor 12) atau Argon2id.
-- Data-at-rest: PostgreSQL encryption (via cloud provider).
-- Data-in-transit: TLS 1.2+.
-- Sensitive fields (e.g., closure_evidence jika berisi info sensitif): column-level encryption opsional.
+- Password hashing: **bcrypt** cost 12 (pakai `golang.org/x/crypto/bcrypt`) atau **Argon2id** (`golang.org/x/crypto/argon2`).
+- Data-at-rest: PostgreSQL encryption (via cloud provider e.g. AWS RDS encryption).
+- Data-in-transit: TLS 1.2+ (enforce di reverse proxy / Fiber).
+- Sensitive fields (e.g., closure_evidence jika berisi info sensitif): column-level encryption opsional via `pgcrypto`.
 
 **Compliance:**
 - Audit log lengkap (untuk SOC 2, ISO 27001 readiness).
-- GDPR: support data export dan "right to be forgotten" (anonymization, bukan hard delete, karena audit log harus preserved).
+- GDPR: support data export (JSON/CSV) dan "right to be forgotten" (anonymization, bukan hard delete, karena audit log harus preserved).
 - Data retention policy configurable per tenant.
 
 **Application Security:**
 - OWASP Top 10 mitigation (default practices).
-- Rate limiting: 100 req/min per user (configurable).
-- CORS strict: only allowed origins.
-- CSP headers.
-- Input validation: class-validator di setiap DTO.
-- SQL injection prevention: ORM parameterized queries (jangan ada raw SQL interpolation).
+- Rate limiting: 100 req/min per user via `github.com/gofiber/fiber/v2/middleware/limiter` (store backend: Redis).
+- CORS strict: `github.com/gofiber/fiber/v2/middleware/cors` — only allowed origins.
+- CSP headers via `github.com/gofiber/helmet/v2`.
+- Input validation: **`github.com/go-playground/validator/v10`** di setiap request DTO struct.
+- SQL injection prevention: GORM parameterized queries / sqlc type-safe codegen (jangan ada `fmt.Sprintf` untuk build SQL).
+- Security scanning di CI: **`gosec`**, **`govulncheck`**, **`trivy`** (container scan).
 
 ### 9.5 Usability
 
 - Web responsive (desktop-first, tablet-compatible).
-- Keyboard navigation penuh untuk HAZOP worksheet (mirip Excel: Tab, Enter, Arrow keys).
-- Bahasa: Indonesia + English (i18n dari Phase 1).
+- Keyboard navigation penuh untuk HAZOP worksheet (mirip Excel: Tab, Enter, Arrow keys) — handled di React TanStack Table + custom keyboard handler.
+- Bahasa: Indonesia + English (i18n dari Phase 1) — pakai **`react-i18next`** di frontend, `golang.org/x/text/message` di backend untuk error message translation.
 - Color-blind safe palette untuk risk matrix (provide pattern sebagai tambahan warna).
 
 ### 9.6 Maintainability
 
-- Code coverage minimum 70% untuk service layer, 90% untuk domain logic.
-- ESLint + Prettier enforced di CI.
-- Conventional Commits.
+- Code coverage minimum 70% untuk service/usecase layer, 90% untuk domain logic (`go test -coverprofile`).
+- **Linting backend:** `golangci-lint` dengan config strict (enabled: gosimple, govet, staticcheck, unused, errcheck, ineffassign, gocyclo, gosec).
+- **Formatting backend:** `gofmt` + `goimports` (enforced di pre-commit).
+- **Linting frontend:** ESLint + Prettier + TypeScript strict mode.
+- Conventional Commits (enforced via `commitlint` + husky di frontend repo, `gitleaks` + `lefthook` di backend repo).
 - API versioning via URL prefix (`/api/v1/...`).
-- Database migration terkontrol (TypeORM migrations atau Prisma migrate).
+- Database migration terkontrol: **`golang-migrate/migrate`** atau **`pressly/goose`** — file SQL up/down yang di-version.
 
 ### 9.7 Observability
 
-- Structured logging (JSON) via Winston atau Pino.
-- Application metrics: Prometheus format, exposed di `/metrics`.
-- Error tracking: Sentry atau equivalent.
-- Distributed tracing: OpenTelemetry (Phase 2).
+- Structured logging (JSON) via **`go.uber.org/zap`** atau **`rs/zerolog`** (pilih salah satu; zap lebih populer untuk production).
+- Application metrics: Prometheus format via `github.com/prometheus/client_golang`, exposed di `/metrics`.
+- Error tracking: Sentry via `github.com/getsentry/sentry-go` (backend) + `@sentry/react` (frontend).
+- Distributed tracing: **OpenTelemetry** (`go.opentelemetry.io/otel`) dengan OTLP exporter ke Tempo/Jaeger (Phase 2).
+- Health check endpoints: `/healthz` (liveness), `/readyz` (readiness — cek DB + Redis).
 
 ---
 
@@ -1207,9 +1318,11 @@ User bisa override manual, tapi system log perubahannya.
 
 ### 10.1 Design System
 
-- Component library: shadcn/ui atau Radix + custom theme.
+- Build tool: **Vite 5+** (fast HMR, native ESM, build via Rollup).
+- Component library: **shadcn/ui** (copy-paste components, built on Radix UI + Tailwind — bukan npm package, jadi fully customizable).
 - Typography: Inter untuk body, JetBrains Mono untuk code/data.
 - Color palette: neutral base + accent per severity (configurable karena risk color adalah *safety-critical semantic*).
+- Icons: **lucide-react** (konsisten dengan shadcn/ui default).
 
 ### 10.2 Key Screens
 
@@ -1220,26 +1333,26 @@ User bisa override manual, tapi system log perubahannya.
 - Right: activity feed.
 
 **Screen 2: HAZOP Worksheet**
-- Spreadsheet-like interface (consider: AG Grid, TanStack Table, atau Handsontable).
+- Spreadsheet-like interface pakai **TanStack Table v8** + `@tanstack/react-virtual` untuk row virtualization.
 - Sticky header row, sticky first column (Node/Parameter).
-- Inline editing dengan validation.
+- Inline editing dengan validation (React Hook Form + Zod).
 - Keyboard shortcuts:
   - `Tab` / `Shift+Tab`: next/prev cell
   - `Enter`: next row
   - `Ctrl+D`: duplicate row
-  - `Ctrl+K`: open library search
+  - `Ctrl+K`: open library search (command palette pakai `cmdk`)
   - `Esc`: cancel edit
 
 **Screen 3: BowTie Canvas**
-- Infinite canvas (pan & zoom).
+- Infinite canvas pakai **React Flow v12+** (pan & zoom, auto-layout, edge routing built-in).
 - Left toolbar: element palette (drag to add).
 - Right sidebar: property panel untuk selected element.
-- Top toolbar: zoom, layout auto-arrange, undo/redo, sync status, export.
-- Mini-map di pojok kanan bawah.
+- Top toolbar: zoom, layout auto-arrange (ELK.js atau dagre integration), undo/redo, sync status, export.
+- Mini-map di pojok kanan bawah (React Flow built-in `MiniMap`).
 
 **Screen 4: Action Dashboard (Kanban)**
 - Columns: Open | In Progress | Under Review | Closed.
-- Cards draggable antar column (dengan permission check).
+- Cards draggable antar column pakai **dnd-kit** (`@dnd-kit/core`, `@dnd-kit/sortable`).
 - Filter bar: assignee, priority, due date, project.
 
 **Screen 5: Risk Matrix Configuration**
@@ -1250,9 +1363,9 @@ User bisa override manual, tapi system log perubahannya.
 ### 10.3 Accessibility
 
 - WCAG 2.1 Level AA compliance (target).
-- Keyboard navigation di semua interactive element.
+- Keyboard navigation di semua interactive element (Radix UI primitives default accessible).
 - ARIA labels di chart/diagram.
-- Focus indicator yang jelas.
+- Focus indicator yang jelas (Tailwind `focus-visible:` utilities).
 - Minimum tap target 44×44px.
 
 ### 10.4 Wireframe References
@@ -1268,9 +1381,10 @@ User bisa override manual, tapi system log perubahannya.
 - RESTful dengan exception untuk endpoint yang secara natural non-REST (e.g., `POST /api/v1/hazop/:id/generate-bowtie`).
 - JSON only (no XML).
 - Versioning: `/api/v1/`, `/api/v2/`.
-- Pagination: cursor-based untuk large dataset (`?cursor=...&limit=50`).
+- Pagination: cursor-based untuk large dataset (`?cursor=...&limit=50`). Cursor = base64-encoded composite of `(created_at, id)`.
 - Filtering: query params (`?status=open&assignee_id=...`).
 - Sorting: `?sort=-created_at` (prefix `-` untuk descending).
+- Request/response struct di Go pakai tag: `json:"field_name"` + `validate:"required,min=1"`.
 
 ### 11.2 Response Structure
 
@@ -1295,6 +1409,22 @@ User bisa override manual, tapi system log perubahannya.
     ],
     "trace_id": "abc-123-..."
   }
+}
+```
+
+Di Go, bikin standardized error response helper:
+
+```go
+type APIError struct {
+    Code    string   `json:"code"`
+    Message string   `json:"message"`
+    Details []Detail `json:"details,omitempty"`
+    TraceID string   `json:"trace_id"`
+}
+
+func (h *Handler) respondError(c *fiber.Ctx, status int, err APIError) error {
+    err.TraceID = c.Locals("trace_id").(string)
+    return c.Status(status).JSON(fiber.Map{"error": err})
 }
 ```
 
@@ -1353,14 +1483,14 @@ GET    /api/v1/mapping/sync-status/:diagram_id
 POST   /api/v1/mapping/resolve-conflict/:diagram_id
 
 # Reports (async)
-POST   /api/v1/reports/generate            # Returns job_id
+POST   /api/v1/reports/generate            # Returns job_id (asynq task ID)
 GET    /api/v1/reports/jobs/:job_id        # Check status
-GET    /api/v1/reports/:id/download        # Signed URL
+GET    /api/v1/reports/:id/download        # Signed S3 URL
 ```
 
 ### 11.5 WebSocket Events (Phase 2)
 
-Untuk real-time collaboration:
+Untuk real-time collaboration, pakai Fiber's WebSocket middleware (`github.com/gofiber/contrib/websocket`):
 
 ```
 # Client → Server
@@ -1368,7 +1498,7 @@ hazop:cell.lock          # Locking cell for edit
 hazop:cell.update
 hazop:cell.unlock
 
-# Server → Client
+# Server → Client (broadcast via Redis pub/sub untuk multi-instance)
 hazop:cell.locked        # Broadcast kalau user lain edit
 hazop:cell.updated
 hazop:user.joined
@@ -1382,52 +1512,104 @@ hazop:user.left
 ### 12.1 Recommended Stack
 
 **Frontend:**
-- Framework: Next.js 15+ (App Router)
-- Language: TypeScript (strict mode)
-- Styling: Tailwind CSS
-- Components: shadcn/ui
-- State: Zustand atau Jotai (hindari Redux untuk project size ini)
-- Server state: TanStack Query
-- Graph/Diagram: React Flow (v12+)
-- Tables: TanStack Table + virtualization
-- Forms: React Hook Form + Zod validation
+- Build tool: **Vite 5+**
+- Framework: **React 18+** (19 when stable)
+- Language: **TypeScript** (strict mode, `"strict": true`)
+- Routing: **React Router v6+** (atau TanStack Router untuk type-safe routing)
+- Styling: **Tailwind CSS v3+**
+- Components: **shadcn/ui** (Radix UI primitives + Tailwind)
+- State (client): **Zustand** (hindari Redux untuk project size ini)
+- State (server): **TanStack Query v5+**
+- Graph/Diagram: **React Flow v12+**
+- Tables: **TanStack Table v8** + `@tanstack/react-virtual`
+- Forms: **React Hook Form** + **Zod** (schema validation)
+- HTTP client: **ky** atau **axios** (wrap with TanStack Query)
+- Icons: **lucide-react**
+- Drag & drop: **dnd-kit**
+- Testing: **Vitest** + **React Testing Library** + **MSW** (API mocking)
+- E2E: **Playwright**
 
 **Backend:**
-- Framework: NestJS
-- Language: TypeScript
-- ORM: Prisma (preferred) atau TypeORM
-- Auth: Passport + JWT
-- Validation: class-validator / Zod
-- Queue: BullMQ (Redis-backed)
-- Cache: Redis
-- File storage: S3-compatible (MinIO for self-host, AWS S3 for cloud)
+- Language: **Go 1.22+** (gunakan LTS-ish version)
+- Web framework: **Fiber v2** (rekomendasi utama — Express-like API, performant, WebSocket support)
+  - Alternatif: **Gin** (lebih populer, komunitas besar) atau **Echo**
+- ORM: **GORM v2** untuk CRUD; **sqlc** untuk hot-path queries
+- Database driver: `github.com/jackc/pgx/v5` (di-wrap GORM atau dipakai langsung oleh sqlc)
+- Auth: **`golang-jwt/jwt/v5`** + custom middleware
+- Password hashing: **`golang.org/x/crypto/bcrypt`**
+- Validation: **`go-playground/validator/v10`**
+- Config: **`spf13/viper`** atau **`caarlos0/env`** (YAML + env var)
+- Logger: **`go.uber.org/zap`** (structured, high-performance)
+- Queue: **`hibiken/asynq`** (Redis-backed, equivalent BullMQ)
+- Cache: **`redis/go-redis/v9`**
+- S3 client: **`aws/aws-sdk-go-v2`** atau **`minio/minio-go`** (kompatibel dengan MinIO + AWS S3)
+- UUID: **`google/uuid`** (dukung UUIDv7)
+- Testing: stdlib `testing` + **`stretchr/testify`** + **`testcontainers-go`** (integration test dengan real Postgres)
+- Mocking: **`uber-go/mock`** (successor of golang/mock) atau **`vektra/mockery`**
+- HTTP testing: pakai `httptest` stdlib + Fiber's testing helper
+- Excel: **`xuri/excelize/v2`**
+- PDF: **`chromedp/chromedp`** (HTML → PDF via headless Chrome) atau `jung-kurt/gofpdf`
+- Email: **`go-mail/mail/v2`** (SMTP), atau HTTP client ke SendGrid/Resend API
+- Migration: **`golang-migrate/migrate`** atau **`pressly/goose`**
 
 **Database:**
-- Primary: PostgreSQL 15+
+- Primary: **PostgreSQL 15+**
+- Extensions: `uuid-ossp` atau UUIDv7 via Go, `pg_trgm` (fuzzy search), `pgcrypto` (optional encryption).
 - Features used: JSONB, full-text search, row-level security.
 
-**Infrastructure (Recommended):**
-- Deployment: Docker + Kubernetes (atau simpler: Docker Compose for Phase 1)
-- CI/CD: GitHub Actions / GitLab CI
-- Monitoring: Prometheus + Grafana
-- Error tracking: Sentry
-- Logs: Grafana Loki atau ELK
+**Infrastructure:**
+- Container: **Docker** + **Docker Compose** (Phase 1), Kubernetes (Phase 2+).
+- CI/CD: **GitHub Actions** (lint → test → build → scan → deploy).
+- Reverse proxy: **Nginx** atau **Caddy** (auto TLS).
+- Monitoring: **Prometheus** + **Grafana**.
+- Error tracking: **Sentry**.
+- Logs: **Grafana Loki** atau ELK.
 
 ### 12.2 Constraints
 
 - **Browser support:** Last 2 versions Chrome, Firefox, Edge, Safari. IE/legacy = out.
-- **Node.js:** LTS version (20.x atau 22.x).
-- **Database version:** PostgreSQL 15+ (butuh fitur modern JSONB indexing).
+- **Go:** 1.22+ (stable). Bisa upgrade ke LTS berikutnya tanpa breaking change major untuk library yang di-pin.
+- **Node.js (untuk build FE):** LTS 20.x atau 22.x.
+- **Database version:** PostgreSQL 15+ (butuh fitur modern JSONB indexing + RLS policy improvements).
 - **Network:** Cloud-hosted deployment. On-premise out of scope Phase 1.
 
 ### 12.3 Third-Party Services
 
 | Service | Purpose | Alternatif |
 |---|---|---|
-| SendGrid / Resend | Transactional email | AWS SES |
+| SendGrid / Resend | Transactional email | AWS SES, Mailgun |
 | AWS S3 / Cloudflare R2 | File storage | MinIO (self-host) |
 | Sentry | Error tracking | Self-host GlitchTip |
-| Stripe | Billing (jika SaaS) | Midtrans for IDN market |
+| Stripe | Billing (jika SaaS) | Midtrans / Xendit untuk market IDN |
+
+### 12.4 Dev Environment Setup (sketch)
+
+Minimum tooling di developer machine:
+- Go 1.22+ (`go version`)
+- Node.js 20+ dengan `pnpm` atau `npm`
+- Docker + Docker Compose
+- `make` (Makefile jadi orchestrator: `make dev`, `make test`, `make lint`, `make migrate-up`)
+- `golangci-lint`, `golang-migrate`, `air` (hot-reload backend)
+
+Contoh `Makefile` snippet:
+```makefile
+.PHONY: dev test lint migrate-up migrate-down
+
+dev:
+	air -c .air.toml
+
+test:
+	go test -race -coverprofile=coverage.out ./...
+
+lint:
+	golangci-lint run ./...
+
+migrate-up:
+	migrate -path migrations -database "$(DATABASE_URL)" up
+
+migrate-down:
+	migrate -path migrations -database "$(DATABASE_URL)" down 1
+```
 
 ---
 
@@ -1441,34 +1623,37 @@ hazop:user.left
 
 | Sprint | Focus | Deliverable |
 |---|---|---|
-| 1 | Foundation | Auth, User mgmt, DB setup, CI/CD |
-| 2 | Project module | Project + Asset hierarchy CRUD |
-| 3 | HAZOP part 1 | Node, Deviation, Cause, Consequence CRUD |
-| 4 | HAZOP part 2 | Safeguard, Risk matrix, Worksheet UI |
-| 5 | Library + Action | Library mgmt, Action tracking, Kanban |
-| 6 | BowTie part 1 | Data model, auto-gen logic, basic render |
-| 7 | BowTie part 2 | Edit canvas, export, sync logic |
-| 8 | Polish | Reporting, Audit log, QA, bug fix |
+| 1 | Foundation | Go+Fiber bootstrap, Vite+React bootstrap, Auth, User mgmt, DB setup (GORM + migrations), CI/CD (GH Actions) |
+| 2 | Project module | Project + Asset hierarchy CRUD (backend + frontend) |
+| 3 | HAZOP part 1 | Node, Deviation, Cause, Consequence CRUD + domain services |
+| 4 | HAZOP part 2 | Safeguard, Risk matrix, Worksheet UI (TanStack Table) |
+| 5 | Library + Action | Library mgmt, Action tracking, Kanban (dnd-kit) |
+| 6 | BowTie part 1 | Data model, auto-gen logic (domain service), basic render (React Flow) |
+| 7 | BowTie part 2 | Edit canvas, export, sync logic, conflict resolution UI |
+| 8 | Polish | Reporting (asynq + excelize/chromedp), Audit log, QA, bug fix |
 
 **Exit criteria:**
 - End-to-end flow: buat project → input HAZOP → generate BowTie → export report.
-- 70% unit test coverage di backend.
-- Basic smoke test di frontend.
+- 70% unit test coverage di backend (`go test -cover`).
+- Basic smoke test di frontend (Vitest) + 1-2 critical E2E (Playwright).
+- Deployed ke staging environment, ter-observasi via Sentry + Grafana.
 
 ### 13.2 Phase 2 — Enhancement (2-3 bulan)
 
-- Real-time collaboration (WebSocket).
+- Real-time collaboration (WebSocket via Fiber + Redis pub/sub untuk multi-instance).
 - Advanced BowTie (escalation factor, drag-drop refinement).
 - LOPA module.
 - Advanced reporting dashboard.
-- Mobile responsive.
+- Mobile responsive polish.
+- OpenTelemetry integration (distributed tracing).
 
 ### 13.3 Phase 3 — Scale & Intelligence (3+ bulan)
 
 - Multi-tenant SaaS productization.
-- AI-assisted suggestion (cause, consequence, safeguard).
+- AI-assisted suggestion (cause, consequence, safeguard) — external LLM API call dari Go worker.
 - Integration APIs (DMS, HSE systems).
 - White-label support.
+- Kubernetes deployment.
 
 ---
 
@@ -1479,9 +1664,10 @@ hazop:user.left
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
 | Domain misinterpretation oleh dev team | High | High | Domain primer (Section 2), pair dengan SME, review tiap sprint |
-| BowTie UI complexity (drag-drop-graph) | High | Medium | Pakai React Flow, prototype early, jangan build from scratch |
+| BowTie UI complexity (drag-drop-graph) | High | Medium | Pakai React Flow v12+, prototype early, jangan build from scratch |
+| Tim kurang familiar Clean Architecture di Go | Medium | Medium | Bikin reference implementation di 1 modul (e.g., Project), lainnya ikutin pattern |
 | Data migration dari existing tools | Medium | High | Build CSV import dari awal, scope Excel import sebagai Phase 2 |
-| Performance pada project besar (>1000 deviations) | Medium | High | Virtualization di table, pagination, index strategy |
+| Performance pada project besar (>1000 deviations) | Medium | Medium | Virtualization di TanStack Table, pagination cursor-based, index strategy. Go lebih cepat dari Node jadi margin lebih aman. |
 | Scope creep dari klien | High | High | SRS ini = baseline, change request = dokumentasi formal |
 | Legal (similarity dengan PHA-Pro/BowTieXP) | Low | High | Jangan clone UI persis, bangun fitur dengan implementasi sendiri |
 
@@ -1491,6 +1677,7 @@ hazop:user.left
 - Klien menyediakan sample data HAZOP real untuk testing.
 - Initial deployment untuk 1 organisasi (multi-tenant bukan Phase 1 priority).
 - User akses via browser modern (tidak perlu support IE).
+- Tim punya minimal 1 orang senior Go developer untuk arsitektur.
 - Data sensitif (intellectual property proyek) tetap terenkripsi di rest & in transit.
 
 ### 14.3 Out-of-Scope (Explicit)
@@ -1515,6 +1702,8 @@ hazop:user.left
 | **Consequence** | Dampak yang mungkin terjadi akibat deviation |
 | **Deviation** | Penyimpangan dari kondisi normal operasi |
 | **Escalation Factor** | Kondisi yang dapat melemahkan barrier |
+| **Fiber** | Web framework Go yang Express-like, pilihan utama untuk project ini |
+| **GORM** | ORM untuk Go, dipakai sebagai default access layer |
 | **Guide Word** | Kata panduan di HAZOP (No, More, Less, dll) |
 | **HAZOP** | Hazard and Operability Study — metode analisis risiko sistematis |
 | **LOPA** | Layer of Protection Analysis — metode semi-kuantitatif |
@@ -1526,87 +1715,153 @@ hazop:user.left
 | **Risk Matrix** | Matriks 2D (Likelihood × Severity) untuk risk ranking |
 | **Safeguard** | Kontrol yang sudah ada untuk mencegah atau mengurangi risiko |
 | **Severity** | Tingkat keparahan dampak (1-5) |
+| **sqlc** | Codegen tool untuk Go yang generate type-safe code dari SQL file |
 | **Threat** | Terminologi BowTie untuk cause yang memicu top event |
 | **Top Event** | Peristiwa kritis di pusat BowTie diagram |
+| **Vite** | Build tool modern untuk frontend, dipakai untuk bundling React SPA |
 
 ---
 
-## Appendix A: Mapping Logic Pseudo-Code
+## Appendix A: Mapping Logic Reference Implementation (Go)
 
-```typescript
-// Core mapping logic — reference implementation
-function generateBowTieFromHAZOP(nodeId: string): BowTieDiagram {
-  const deviations = repo.deviations.findByNode(nodeId);
-  
-  // Group deviations by semantic top event
-  const topEventGroups = groupDeviationsByTopEvent(deviations);
-  
-  const diagram = new BowTieDiagram({ nodeId });
-  
-  for (const group of topEventGroups) {
-    const topEvent = diagram.createTopEvent({
-      label: group.label,
-      sourceDeviationIds: group.deviations.map(d => d.id),
-    });
-    
-    // Collect all causes from all deviations in group
-    const uniqueCauses = dedupBy(
-      group.deviations.flatMap(d => d.causes),
-      c => c.id
-    );
-    
-    for (const cause of uniqueCauses) {
-      const threat = diagram.createThreat({
-        label: cause.description,
-        sourceCauseId: cause.id,
-      });
-      diagram.connect(threat, topEvent);
-      
-      // Safeguards linked to this cause → preventive barriers
-      const preventiveSafeguards = cause.safeguards
-        .filter(sg => sg.safeguardType === 'preventive' || sg.safeguardType === 'both');
-      
-      for (const sg of preventiveSafeguards) {
-        const barrier = diagram.createBarrier({
-          type: 'preventive',
-          label: sg.description,
-          sourceSafeguardId: sg.id,
-        });
-        diagram.insertBarrierOnConnection(threat, topEvent, barrier);
-      }
+Pseudo-code untuk core mapping logic di domain layer. File: `internal/domain/mapping/generator.go`.
+
+```go
+package mapping
+
+import (
+    "context"
+
+    "github.com/google/uuid"
+    "your-org/irms/internal/domain/bowtie"
+    "your-org/irms/internal/domain/hazop"
+)
+
+// BowTieGenerator orchestrates the HAZOP → BowTie transformation.
+// It depends on repository interfaces only (no DB / framework imports).
+type BowTieGenerator struct {
+    hazopRepo  hazop.Repository
+    bowtieRepo bowtie.Repository
+    grouper    TopEventGrouper // pluggable: semantic / manual / heuristic
+}
+
+func NewBowTieGenerator(hr hazop.Repository, br bowtie.Repository, g TopEventGrouper) *BowTieGenerator {
+    return &BowTieGenerator{hazopRepo: hr, bowtieRepo: br, grouper: g}
+}
+
+// GenerateFromNode builds a BowTie diagram from all deviations under a node.
+func (g *BowTieGenerator) GenerateFromNode(ctx context.Context, nodeID uuid.UUID) (*bowtie.Diagram, error) {
+    deviations, err := g.hazopRepo.FindDeviationsByNode(ctx, nodeID)
+    if err != nil {
+        return nil, err
     }
-    
-    // Process consequences
-    const uniqueConseqs = dedupBy(
-      group.deviations.flatMap(d => d.consequences),
-      c => c.id
-    );
-    
-    for (const conseq of uniqueConseqs) {
-      const consequence = diagram.createConsequence({
-        label: conseq.description,
-        sourceConsequenceId: conseq.id,
-      });
-      diagram.connect(topEvent, consequence);
-      
-      const mitigativeSafeguards = conseq.safeguards
-        .filter(sg => sg.safeguardType === 'mitigative' || sg.safeguardType === 'both');
-      
-      for (const sg of mitigativeSafeguards) {
-        const barrier = diagram.createBarrier({
-          type: 'mitigative',
-          label: sg.description,
-          sourceSafeguardId: sg.id,
-        });
-        diagram.insertBarrierOnConnection(topEvent, consequence, barrier);
-      }
+
+    // Group deviations into semantic top events.
+    groups := g.grouper.Group(deviations)
+
+    diagram := bowtie.NewDiagram(nodeID)
+
+    for _, group := range groups {
+        topEvent := diagram.AddTopEvent(bowtie.TopEventInput{
+            Label:              group.Label,
+            SourceDeviationIDs: group.DeviationIDs(),
+        })
+
+        // ── Threats side ─────────────────────────────────────────
+        uniqueCauses := dedupByID(group.Causes())
+        for _, cause := range uniqueCauses {
+            threat := diagram.AddThreat(bowtie.ThreatInput{
+                Label:         cause.Description,
+                SourceCauseID: cause.ID,
+            })
+            diagram.Connect(threat.ID, topEvent.ID, bowtie.ConnThreatToEvent)
+
+            // Preventive barriers from safeguards on this cause.
+            for _, sg := range cause.Safeguards {
+                if !isPreventive(sg) {
+                    continue
+                }
+                barrier := diagram.AddBarrier(bowtie.BarrierInput{
+                    Type:              bowtie.BarrierPreventive,
+                    Label:             sg.Description,
+                    SourceSafeguardID: sg.ID,
+                })
+                diagram.InsertBarrierOn(threat.ID, topEvent.ID, barrier.ID)
+            }
+        }
+
+        // ── Consequences side ────────────────────────────────────
+        uniqueConseqs := dedupByID(group.Consequences())
+        for _, c := range uniqueConseqs {
+            conseq := diagram.AddConsequence(bowtie.ConsequenceInput{
+                Label:              c.Description,
+                SourceConsequenceID: c.ID,
+            })
+            diagram.Connect(topEvent.ID, conseq.ID, bowtie.ConnEventToConsequence)
+
+            for _, sg := range c.Safeguards {
+                if !isMitigative(sg) {
+                    continue
+                }
+                barrier := diagram.AddBarrier(bowtie.BarrierInput{
+                    Type:              bowtie.BarrierMitigative,
+                    Label:             sg.Description,
+                    SourceSafeguardID: sg.ID,
+                })
+                diagram.InsertBarrierOn(topEvent.ID, conseq.ID, barrier.ID)
+            }
+        }
     }
-  }
-  
-  diagram.autoLayout(); // Position elements automatically
-  return diagram;
+
+    diagram.AutoLayout() // deterministic positioning (dagre-like algorithm in Go)
+
+    if err := g.bowtieRepo.Save(ctx, diagram); err != nil {
+        return nil, err
+    }
+    return diagram, nil
+}
+
+// ── helpers ─────────────────────────────────────────────────────
+
+func isPreventive(sg hazop.Safeguard) bool {
+    return sg.Type == hazop.SafeguardPreventive || sg.Type == hazop.SafeguardBoth
+}
+
+func isMitigative(sg hazop.Safeguard) bool {
+    return sg.Type == hazop.SafeguardMitigative || sg.Type == hazop.SafeguardBoth
+}
+
+// dedupByID keeps the first occurrence of each ID; generic across entity types
+// that expose an ID() method (or pick concrete types — keep it simple).
+func dedupByID[T interface{ GetID() uuid.UUID }](items []T) []T {
+    seen := make(map[uuid.UUID]struct{}, len(items))
+    out := make([]T, 0, len(items))
+    for _, it := range items {
+        if _, ok := seen[it.GetID()]; ok {
+            continue
+        }
+        seen[it.GetID()] = struct{}{}
+        out = append(out, it)
+    }
+    return out
 }
 ```
+
+**Testing pattern** — karena generator hanya depend ke interface `hazop.Repository` dan `bowtie.Repository`, unit test cukup pakai mock implementation tanpa DB:
+
+```go
+func TestBowTieGenerator_GenerateFromNode_DedupsCauses(t *testing.T) {
+    hazopRepo := &mockHAZOPRepo{ /* preloaded deviations with duplicate causes */ }
+    bowtieRepo := &mockBowTieRepo{}
+    gen := mapping.NewBowTieGenerator(hazopRepo, bowtieRepo, mapping.NewSemanticGrouper())
+
+    diagram, err := gen.GenerateFromNode(context.Background(), testNodeID)
+    require.NoError(t, err)
+    assert.Len(t, diagram.Threats(), 3, "duplicate causes should collapse to 3 unique threats")
+}
+```
+
+---
 
 ## Appendix B: Sample HAZOP Data (untuk Testing & Seeding)
 
@@ -1651,6 +1906,31 @@ function generateBowTieFromHAZOP(nodeId: string): BowTieDiagram {
 }
 ```
 
+Di backend Go, file ini bisa di-load sebagai seed via `cmd/seed/main.go`:
+
+```go
+package main
+
+import (
+    "encoding/json"
+    "log"
+    "os"
+    // ...
+)
+
+func main() {
+    data, err := os.ReadFile("testdata/sample_hazop.json")
+    if err != nil {
+        log.Fatal(err)
+    }
+    var payload SeedPayload
+    if err := json.Unmarshal(data, &payload); err != nil {
+        log.Fatal(err)
+    }
+    // ... call seeder.Run(payload)
+}
+```
+
 ---
 
 ## Appendix C: Pre-Development Checklist
@@ -1659,15 +1939,23 @@ Sebelum mulai sprint 1, pastikan:
 
 - [ ] Akses ke SME (Subject Matter Expert) process safety sudah scheduled.
 - [ ] Sample data HAZOP real dari klien sudah diterima (dengan NDA jika perlu).
-- [ ] Design system base sudah disepakati (warna, typography, spacing).
-- [ ] Repository structure sudah di-bootstrap (monorepo atau split).
-- [ ] CI/CD pipeline dasar sudah jalan (lint, test, build).
+- [ ] Design system base sudah disepakati (warna, typography, spacing di Figma).
+- [ ] Repository structure sudah di-bootstrap (2 repo: `irms-backend` Go, `irms-frontend` Vite/React — atau monorepo pakai pnpm workspace + Go multi-module).
+- [ ] CI/CD pipeline dasar sudah jalan: backend (golangci-lint, go test, go build, trivy scan, gosec), frontend (eslint, vitest, vite build).
 - [ ] Database ERD di-review dan di-approve oleh tech lead.
-- [ ] Risk matrix template default sudah disiapkan.
-- [ ] Guide words set standar (IEC 61882) sudah di-seed di DB.
+- [ ] Risk matrix template default sudah disiapkan (seed file JSON).
+- [ ] Guide words set standar (IEC 61882) sudah di-seed di DB (migration + seed SQL).
+- [ ] Local dev environment smoke test: `docker-compose up` → backend up di `:8080`, frontend up di `:5173`, hit `/healthz` return 200.
 
 ---
 
-**End of SRS Document v1.0**
+**End of SRS Document v1.1 (Go + Vite stack)**
 
 > Dokumen ini adalah *living document*. Change request harus didokumentasikan di bagian Revision History dan di-approve oleh stakeholder yang relevan. Jangan edit langsung; pakai PR + review.
+
+### Revision History
+
+| Version | Date | Changes | Author |
+|---|---|---|---|
+| 1.0 | - | Initial draft (NestJS + Next.js) | - |
+| 1.1 | 2026-04-22 | Rewrite stack ke Go (Fiber) + Vite.js + React. Update Section 5 (arsitektur), 9.4/9.6/9.7 (tooling), 12 (full stack), Appendix A (Go implementation). Domain logic, business rules, data model unchanged. | Rewrite |
