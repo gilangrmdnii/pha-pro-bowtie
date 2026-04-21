@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>IRMS Design System — Visual Reference</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  /* ═══ CSS VARIABLES (subset of globals.css) ═══════════════════ */
+  :root {
+    /* Neutrals */
+    --n50: #F8FAFC;  --n100: #F1F5F9; --n200: #E2E8F0; --n300: #CBD5E1;
+    --n400: #94A3B8; --n500: #64748B; --n600: #475569; --n700: #334155;
+    --n800: #1E293B; --n900: #0F172A; --n950: #020617;
+
+    /* Brand */
+    --brand-50: #EFF6FF;  --brand-100: #DBEAFE; --brand-500: #2563EB;
+    --brand-600: #1D4ED8; --brand-700: #1E40AF; --brand-800: #1E3A8A;
+
+    /* Risk */
+    --risk-low: #16A34A;     --risk-low-bg: #DCFCE7;
+    --risk-medium: #F59E0B;  --risk-medium-bg: #FEF3C7;
+    --risk-high: #EA580C;    --risk-high-bg: #FED7AA;
+    --risk-extreme: #B91C1C; --risk-extreme-bg: #FEE2E2;
+
+    /* Status */
+    --status-open: #0284C7;
+    --status-inprogress: #F59E0B;
+    --status-review: #9333EA;
+    --status-closed: #16A34A;
+    --status-rejected: #64748B;
+  }
+
+  /* ═══ RESET & BASE ════════════════════════════════════════════ */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-feature-settings: "cv11", "ss01", "ss03", "tnum";
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--n700);
+    background: var(--n50);
+  }
+
+  code, pre, .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+  /* ═══ LAYOUT ══════════════════════════════════════════════════ */
+  .page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 48px 32px;
+  }
+
+  .header {
+    border-bottom: 1px solid var(--n200);
+    padding-bottom: 24px;
+    margin-bottom: 48px;
+  }
+
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--n500);
+    margin-bottom: 8px;
+  }
+
+  h1 {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    color: var(--n900);
+    line-height: 1.1;
+  }
+
+  .subtitle {
+    font-size: 16px;
+    color: var(--n500);
+    margin-top: 8px;
+    max-width: 640px;
+  }
+
+  .section {
+    margin-bottom: 64px;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--n200);
+    padding-bottom: 12px;
+    margin-bottom: 24px;
+  }
+
+  h2 {
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--n900);
+  }
+
+  .section-meta {
+    font-size: 12px;
+    color: var(--n500);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  h3 {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--n500);
+    margin-bottom: 16px;
+  }
+
+  .group {
+    margin-bottom: 32px;
+  }
+
+  /* ═══ COLOR SWATCHES ══════════════════════════════════════════ */
+  .swatch-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+  }
+
+  .swatch {
+    border: 1px solid var(--n200);
+    border-radius: 4px;
+    overflow: hidden;
+    background: white;
+  }
+
+  .swatch-color {
+    height: 64px;
+    position: relative;
+  }
+
+  .swatch-meta {
+    padding: 8px 10px;
+    border-top: 1px solid var(--n200);
+  }
+
+  .swatch-name {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--n700);
+  }
+
+  .swatch-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--n500);
+    margin-top: 2px;
+  }
+
+  /* ═══ TYPOGRAPHY ═══════════════════════════════════════════════ */
+  .type-row {
+    display: grid;
+    grid-template-columns: 100px 80px 1fr;
+    gap: 24px;
+    align-items: baseline;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--n100);
+  }
+
+  .type-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--n500);
+  }
+
+  .type-size {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--n400);
+  }
+
+  /* ═══ COMPONENTS PANEL ═══════════════════════════════════════ */
+  .panel {
+    background: white;
+    border: 1px solid var(--n200);
+    border-radius: 4px;
+    padding: 24px;
+  }
+
+  .demo-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
+  .demo-row:last-child { margin-bottom: 0; }
+
+  .demo-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--n500);
+    min-width: 90px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  /* ═══ BUTTONS ══════════════════════════════════════════════════ */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 14px;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 150ms cubic-bezier(0.16, 1, 0.3, 1);
+    white-space: nowrap;
+  }
+
+  .btn-primary {
+    background: var(--brand-600);
+    color: white;
+  }
+  .btn-primary:hover { background: var(--brand-700); }
+
+  .btn-secondary {
+    background: white;
+    border-color: var(--n200);
+    color: var(--n700);
+  }
+  .btn-secondary:hover { background: var(--n100); border-color: var(--n300); }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--n700);
+  }
+  .btn-ghost:hover { background: var(--n100); }
+
+  .btn-destructive {
+    background: var(--risk-extreme);
+    color: white;
+  }
+  .btn-destructive:hover { background: #991B1B; }
+
+  .btn-sm { height: 28px; padding: 0 10px; font-size: 12px; }
+  .btn-lg { height: 44px; padding: 0 18px; font-size: 16px; }
+
+  /* ═══ RISK BADGES ═════════════════════════════════════════════ */
+  .risk-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 2px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .risk-low     { background: var(--risk-low);     color: white; }
+  .risk-medium  { background: var(--risk-medium);  color: #1a1a1a; }
+  .risk-high    { background: var(--risk-high);    color: white; }
+  .risk-extreme { background: var(--risk-extreme); color: white; }
+
+  .risk-icon { width: 12px; height: 12px; flex-shrink: 0; }
+
+  /* Color-blind pattern overlays */
+  .pattern-low::after {
+    content: ''; position: absolute; inset: 0;
+    background-image: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.3) 4px, rgba(255,255,255,0.3) 6px);
+  }
+  .pattern-medium::after {
+    content: ''; position: absolute; inset: 0;
+    background-image: radial-gradient(circle, rgba(0,0,0,0.18) 1.2px, transparent 1.2px);
+    background-size: 6px 6px;
+  }
+  .pattern-high::after {
+    content: ''; position: absolute; inset: 0;
+    background-image:
+      repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.25) 4px, rgba(255,255,255,0.25) 5px),
+      repeating-linear-gradient(-45deg, transparent, transparent 4px, rgba(255,255,255,0.25) 4px, rgba(255,255,255,0.25) 5px);
+  }
+  .pattern-extreme::after {
+    content: ''; position: absolute; inset: 0;
+    background-image: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(255,255,255,0.35) 3px, rgba(255,255,255,0.35) 4px);
+  }
+
+  /* ═══ STATUS CHIPS ═════════════════════════════════════════════ */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 2px;
+    font-size: 11px;
+    font-weight: 600;
+    background: white;
+    border: 1px solid;
+  }
+
+  .chip-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+  }
+
+  .chip-open       { color: var(--status-open);        border-color: var(--status-open); }
+  .chip-open .chip-dot       { background: var(--status-open); }
+  .chip-inprogress { color: var(--status-inprogress);  border-color: var(--status-inprogress); }
+  .chip-inprogress .chip-dot { background: var(--status-inprogress); }
+  .chip-review     { color: var(--status-review);      border-color: var(--status-review); }
+  .chip-review .chip-dot     { background: var(--status-review); }
+  .chip-closed     { color: var(--status-closed);      border-color: var(--status-closed); }
+  .chip-closed .chip-dot     { background: var(--status-closed); }
+  .chip-rejected   { color: var(--status-rejected);    border-color: var(--status-rejected); }
+  .chip-rejected .chip-dot   { background: var(--status-rejected); }
+
+  /* ═══ RISK MATRIX ══════════════════════════════════════════════ */
+  .risk-matrix {
+    display: grid;
+    grid-template-columns: 80px repeat(5, 1fr);
+    gap: 2px;
+    max-width: 520px;
+  }
+
+  .rm-axis-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--n500);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+  }
+
+  .rm-cell {
+    position: relative;
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 700;
+    font-size: 14px;
+    font-family: 'JetBrains Mono', monospace;
+    cursor: pointer;
+    transition: all 150ms;
+    overflow: hidden;
+  }
+
+  .rm-cell:hover {
+    box-shadow: 0 0 0 2px var(--brand-500);
+    z-index: 1;
+  }
+
+  .rm-cell-count {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: rgba(0,0,0,0.3);
+    color: white;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 4px;
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ═══ HAZOP TABLE PREVIEW ═════════════════════════════════════ */
+  .hazop-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  .hazop-table th {
+    background: var(--n100);
+    border-bottom: 2px solid var(--n300);
+    padding: 8px 12px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--n500);
+    white-space: nowrap;
+  }
+
+  .hazop-table td {
+    border-bottom: 1px solid var(--n200);
+    border-right: 1px solid var(--n200);
+    padding: 10px 12px;
+    vertical-align: middle;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .hazop-table tr:hover td { background: var(--n50); }
+
+  .hazop-table .col-num {
+    width: 40px;
+    color: var(--n400);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-align: right;
+  }
+
+  /* ═══ BOWTIE NODE PREVIEW ═════════════════════════════════════ */
+  .bowtie-preview {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 32px;
+    background: var(--n50);
+    border-radius: 4px;
+    border: 1px dashed var(--n300);
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .bt-node {
+    min-width: 120px;
+    max-width: 180px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: 2px solid;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.3;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    background: white;
+  }
+
+  .bt-threat        { border-color: var(--risk-extreme); background: var(--risk-extreme-bg); color: var(--n900); }
+  .bt-topevent      { border-color: var(--n950); background: var(--n900); color: white; clip-path: polygon(10% 0, 90% 0, 100% 50%, 90% 100%, 10% 100%, 0 50%); padding: 12px 20px; min-width: 140px; font-weight: 600; }
+  .bt-prev-barrier  { border-color: var(--brand-600); background: var(--brand-50); color: var(--n900); min-width: 90px; }
+  .bt-mit-barrier   { border-color: var(--risk-low); background: var(--risk-low-bg); color: var(--n900); min-width: 90px; }
+  .bt-consequence   { border-color: var(--risk-high); background: var(--risk-high-bg); color: var(--n900); }
+  .bt-escalation    { border-color: var(--risk-medium); background: var(--risk-medium-bg); color: var(--n900); transform: rotate(-45deg); width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; font-size: 10px; text-align: center; }
+
+  /* ═══ FORM CONTROLS ═══════════════════════════════════════════ */
+  .input {
+    height: 36px;
+    padding: 0 12px;
+    border: 1px solid var(--n200);
+    border-radius: 4px;
+    background: white;
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--n900);
+    width: 240px;
+    transition: all 150ms;
+  }
+  .input:focus {
+    outline: none;
+    border-color: var(--brand-500);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  }
+  .input-error {
+    border-color: var(--risk-extreme);
+  }
+  .input-error:focus {
+    box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.15);
+  }
+
+  .label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--n700);
+    margin-bottom: 6px;
+  }
+
+  .label-required::after {
+    content: ' *';
+    color: var(--risk-extreme);
+  }
+
+  .error-text {
+    font-size: 12px;
+    color: var(--risk-extreme);
+    margin-top: 4px;
+  }
+
+  /* ═══ KBD ══════════════════════════════════════════════════════ */
+  .kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 4px;
+    border: 1px solid var(--n200);
+    background: var(--n100);
+    border-radius: 3px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--n600);
+  }
+
+  /* ═══ SPACING SCALE VIZ ═══════════════════════════════════════ */
+  .spacing-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--n100);
+  }
+  .spacing-bar {
+    height: 12px;
+    background: var(--brand-600);
+    border-radius: 2px;
+  }
+  .spacing-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--n500);
+    min-width: 120px;
+  }
+
+  /* ═══ ICON SHAPES (inline SVG for semantic risk) ═════════════ */
+  svg.icon { width: 12px; height: 12px; flex-shrink: 0; }
+
+  /* ═══ NAV / SIDEBAR DEMO ═══════════════════════════════════════ */
+  .nav-demo {
+    background: white;
+    border: 1px solid var(--n200);
+    border-radius: 4px;
+    padding: 8px;
+    max-width: 240px;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 4px;
+    color: var(--n600);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .nav-item:hover { background: var(--n100); color: var(--n900); }
+  .nav-item.active { background: var(--brand-50); color: var(--brand-700); }
+  .nav-item .nav-count {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--n400);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ═══ SHADOW SCALE ═════════════════════════════════════════════ */
+  .shadow-demo {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 24px;
+    padding: 32px;
+    background: var(--n50);
+    border-radius: 4px;
+  }
+  .shadow-box {
+    background: white;
+    height: 80px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--n500);
+  }
+  .shadow-sm { box-shadow: 0 1px 2px rgb(0 0 0 / 0.04); }
+  .shadow-default { box-shadow: 0 1px 3px rgb(0 0 0 / 0.08), 0 1px 2px rgb(0 0 0 / 0.04); }
+  .shadow-md { box-shadow: 0 4px 6px rgb(0 0 0 / 0.07), 0 2px 4px rgb(0 0 0 / 0.04); }
+  .shadow-lg { box-shadow: 0 10px 15px rgb(0 0 0 / 0.08), 0 4px 6px rgb(0 0 0 / 0.04); }
+
+  /* ═══ PRIORITY CARD DEMO ══════════════════════════════════════ */
+  .kanban-card {
+    background: white;
+    border: 1px solid var(--n200);
+    border-radius: 4px;
+    padding: 12px;
+    border-left: 3px solid;
+    max-width: 280px;
+    transition: all 150ms;
+  }
+  .kanban-card:hover { box-shadow: 0 1px 3px rgba(0,0,0,0.08); border-color: var(--n300); }
+  .kanban-card-critical { border-left-color: var(--risk-extreme); }
+  .kanban-card-high     { border-left-color: var(--risk-high); }
+  .kanban-card-medium   { border-left-color: var(--risk-medium); }
+  .kanban-card-low      { border-left-color: var(--risk-low); }
+  .kanban-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--n900);
+    margin-bottom: 4px;
+    line-height: 1.35;
+  }
+  .kanban-meta {
+    font-size: 11px;
+    color: var(--n500);
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 8px;
+  }
+  .kanban-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--n500);
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--n100);
+  }
+
+  /* Footer */
+  footer {
+    margin-top: 80px;
+    padding-top: 24px;
+    border-top: 1px solid var(--n200);
+    font-size: 12px;
+    color: var(--n500);
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- HEADER                                                       -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <header class="header">
+    <div class="eyebrow">IRMS · Design System · v1.0</div>
+    <h1>Industrial Precision</h1>
+    <p class="subtitle">
+      Visual language for the Integrated Risk Management System.
+      Muted chrome, reserved semantic color, tabular density — designed for
+      engineers scanning hundreds of risk scenarios.
+    </p>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- 01. COLOR — NEUTRALS                                         -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <section class="section">
+    <div class="section-header">
+      <h2>01 — Neutrals</h2>
+      <span class="section-meta">Slate scale · 11 stops</span>
+    </div>
+    <div class="swatch-grid">
+      <div class="swatch"><div class="swatch-color" style="background:#F8FAFC"></div><div class="swatch-meta"><div class="swatch-name">neutral-50</div><div class="swatch-value">#F8FAFC</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#F1F5F9"></div><div class="swatch-meta"><div class="swatch-name">neutral-100</div><div class="swatch-value">#F1F5F9</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#E2E8F0"></div><div class="swatch-meta"><div class="swatch-name">neutral-200</div><div class="swatch-value">#E2E8F0</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#CBD5E1"></div><div class="swatch-meta"><div class="swatch-name">neutral-300</div><div class="swatch-value">#CBD5E1</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#94A3B8"></div><div class="swatch-meta"><div class="swatch-name">neutral-400</div><div class="swatch-value">#94A3B8</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#64748B"></div><div class="swatch-meta"><div class="swatch-name">neutral-500</div><div class="swatch-value">#64748B</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#475569"></div><div class="swatch-meta"><div class="swatch-name">neutral-600</div><div class="swatch-value">#475569</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#334155"></div><div class="swatch-meta"><div class="swatch-name">neutral-700</div><div class="swatch-value">#334155</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#1E293B"></div><div class="swatch-meta"><div class="swatch-name">neutral-800</div><div class="swatch-value">#1E293B</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#0F172A"></div><div class="swatch-meta"><div class="swatch-name">neutral-900</div><div class="swatch-value">#0F172A</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#020617"></div><div class="swatch-meta"><div class="swatch-name">neutral-950</div><div class="swatch-value">#020617</div></div></div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- 02. COLOR — BRAND                                            -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <section class="section">
+    <div class="section-header">
+      <h2>02 — Brand · Steel Blue</h2>
+      <span class="section-meta">Primary · Focus · Link</span>
+    </div>
+    <div class="swatch-grid">
+      <div class="swatch"><div class="swatch-color" style="background:#EFF6FF"></div><div class="swatch-meta"><div class="swatch-name">brand-50</div><div class="swatch-value">#EFF6FF</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#DBEAFE"></div><div class="swatch-meta"><div class="swatch-name">brand-100</div><div class="swatch-value">#DBEAFE</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#2563EB"></div><div class="swatch-meta"><div class="swatch-name">brand-500</div><div class="swatch-value">#2563EB</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#1D4ED8"></div><div class="swatch-meta"><div class="swatch-name">brand-600 ★</div><div class="swatch-value">#1D4ED8</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#1E40AF"></div><div class="swatch-meta"><div class="swatch-name">brand-700</div><div class="swatch-value">#1E40AF</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#1E3A8A"></div><div class="swatch-meta"><div class="swatch-name">brand-800</div><div class="swatch-value">#1E3A8A</div></div></div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- 03. SEMANTIC — RISK SEVERITY                                 -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <section class="section">
+    <div class="section-header">
+      <h2>03 — Risk Severity</h2>
+      <span class="section-meta">Safety-critical · Triple redundancy</span>
+    </div>
+    <div class="panel">
+      <div class="group">
+        <h3>Badge Variants (icon + color + label)</h3>
+        <div class="demo-row">
+          <span class="demo-label">Standard</span>
+          <span class="risk-badge risk-low">
+            <svg class="risk-icon" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+            LOW · 4
+          </span>
+          <span class="risk-badge risk-medium">
+            <svg class="risk-icon" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            MEDIUM · 9
+          </span>
+          <span class="risk-badge risk-high">
+            <svg class="risk-icon" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            HIGH · 15
+          </span>
+          <span class="risk-badge risk-extreme">
+            <svg class="risk-icon" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            EXTREME · 20
+          </span>
+        </div>
+        <div class="demo-row">
+          <span class="demo-label">Color-blind mode</span>
+          <span class="risk-badge risk-low" style="position:relative"><svg class="risk-icon" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>LOW<span class="pattern-low"></span></span>
+          <span class="risk-badge risk-medium" style="position:relative"><svg class="risk-icon" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>MEDIUM<span class="pattern-medium"></span></span>
+          <span class="risk-badge risk-high" style="position:relative"><svg class="risk-icon" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/></svg>HIGH<span class="pattern-high"></span></span>
+          <span class="risk-badge risk-extreme" style="position:relative"><svg class="risk-icon" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/></svg>EXTREME<span class="pattern-extreme"></span></span>
+        </div>
+      </div>
+
+      <div class="group">
+        <h3>Risk Matrix · 5 × 5</h3>
+        <div class="risk-matrix">
+          <div class="rm-axis-label">S ↑ / L →</div>
+          <div class="rm-axis-label">1</div><div class="rm-axis-label">2</div><div class="rm-axis-label">3</div><div class="rm-axis-label">4</div><div class="rm-axis-label">5</div>
+
+          <div class="rm-axis-label">5</div>
+          <div class="rm-cell" style="background:var(--risk-medium);color:#1a1a1a">5<span class="rm-cell-count" style="background:rgba(0,0,0,0.25);color:#1a1a1a">2</span></div>
+          <div class="rm-cell" style="background:var(--risk-high)">10<span class="rm-cell-count">5</span></div>
+          <div class="rm-cell" style="background:var(--risk-high)">15<span class="rm-cell-count">8</span></div>
+          <div class="rm-cell" style="background:var(--risk-extreme)">20<span class="rm-cell-count">3</span></div>
+          <div class="rm-cell" style="background:var(--risk-extreme)">25<span class="rm-cell-count">1</span></div>
+
+          <div class="rm-axis-label">4</div>
+          <div class="rm-cell" style="background:var(--risk-low)">4</div>
+          <div class="rm-cell" style="background:var(--risk-medium);color:#1a1a1a">8<span class="rm-cell-count" style="background:rgba(0,0,0,0.25);color:#1a1a1a">4</span></div>
+          <div class="rm-cell" style="background:var(--risk-high)">12<span class="rm-cell-count">7</span></div>
+          <div class="rm-cell" style="background:var(--risk-high)">16</div>
+          <div class="rm-cell" style="background:var(--risk-extreme)">20<span class="rm-cell-count">2</span></div>
+
+          <div class="rm-axis-label">3</div>
+          <div class="rm-cell" style="background:var(--risk-low)">3</div>
+          <div class="rm-cell" style="background:var(--risk-low)">6<span class="rm-cell-count">12</span></div>
+          <div class="rm-cell" style="background:var(--risk-medium);color:#1a1a1a">9<span class="rm-cell-count" style="background:rgba(0,0,0,0.25);color:#1a1a1a">6</span></div>
+          <div class="rm-cell" style="background:var(--risk-high)">12</div>
+          <div class="rm-cell" style="background:var(--risk-high)">15</div>
+
+          <div class="rm-axis-label">2</div>
+          <div class="rm-cell" style="background:var(--risk-low)">2</div>
+          <div class="rm-cell" style="background:var(--risk-low)">4</div>
+          <div class="rm-cell" style="background:var(--risk-low)">6</div>
+          <div class="rm-cell" style="background:var(--risk-medium);color:#1a1a1a">8</div>
+          <div class="rm-cell" style="background:var(--risk-medium);color:#1a1a1a">10</div>
+
+          <div class="rm-axis-label">1</div>
+          <div class="rm-cell" style="background:var(--risk-low)">1</div>
+          <div class="rm-cell" style="background:var(--risk-low)">2</div>
+          <div class="rm-cell" style="background:var(--risk-low)">3</div>
+          <div class="rm-cell" style="background:var(--risk-low)">4</div>
+          <div class="rm-cell" style="background:var(--risk-medium);color:#1a1a1a">5</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- 04. STATUS CHIPS                                             -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <section class="section">
+    <div class="section-header">
+      <h2>04 — Action Status</h2>
+      <span class="section-meta">Lifecycle chips</span>
+    </div>
+    <div class="panel">
+      <div class="demo-row">
+        <span class="chip chip-open"><span class="chip-dot"></span>Open</span>
+        <span class="chip chip-inprogress"><span class="chip-dot"></span>In Progress</span>
+        <span class="chip chip-review"><span class="chip-dot"></span>Under Review</span>
+        <span class="chip chip-closed"><span class="chip-dot"></span>Closed</span>
+        <span class="chip chip-rejected"><span class="chip-dot"></span>Rejected</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- 05. TYPOGRAPHY                                               -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <section class="section">
+    <div class="section-header">
+      <h2>05 — Typography</h2>
+      <span class="section-meta">Inter · JetBrains Mono</span>
+    </div>
+    <div class="panel">
+      <div class="type-row"><span class="type-label">text-4xl</span><span class="type-size">36 / 40</span><span style="font-size:36px;line-height:40px;letter-spacing:-0.03em;font-weight:700">Hazard Analysis Dashboard</span></div>
+      <div class="type-row"><span class="type-label">text-3xl</span><span class="type-size">30 / 36</span><span style="font-size:30px;line-height:36px;letter-spacing:-0.02em;font-weight:700">Kilang A — Debottlenecking</span></div>
+      <div class="type-row"><span class="type-label">text-2xl</span><span class="type-size">24 / 32</span><span style="font-size:24px;line-height:32px;letter-spacing:-0.02em;font-weight:600">HAZOP Worksheet · Node 12</span></div>
+      <div class="type-row"><span class="type-label">text-xl</span><span class="type-size">20 / 28</span><span style="font-size:20px;line-height:28px;letter-spacing:-0.01em;font-weight:600">Reactor R-101 Feed Line</span></div>
+      <div class="type-row"><span class="type-label">text-lg</span><span class="type-size">18 / 28</span><span style="font-size:18px;line-height:28px;letter-spacing:-0.01em">Deviation: No Flow from P-101</span></div>
+      <div class="type-row"><span class="type-label">text-base</span><span class="type-size">16 / 24</span><span style="font-size:16px;line-height:24px">Body paragraph text for detail views and prose content.</span></div>
+      <div class="type-row"><span class="type-label">text-sm</span><span class="type-size">14 / 20</span><span style="font-size:14px;line-height:20px">Default UI text — table cells, form labels, nav items.</span></div>
+      <div class="type-row"><span class="type-label">text-xs</span><span class="type-size">12 / 16</span><span style="font-size:12px;line-height:16px;letter-spacing:0.01em">Captions, meta info, secondary labels.</span></div>
+      <div class="type-row"><span class="type-label">text-2xs</span><span class="type-size">11 / 14</span><span style="font-size:11px;line-height:14px;letter-spacing:0.02em;text-transform:uppercase;font-weight:600">BADGE · TAG · MICRO-LABEL</span></div>
+      <div class="type-row"><span class="type-label">mono</span><span class="type-size">13 / 20</span><span class="mono" style="font-size:13px">PROJ-2026-017 · FAL-101 · 2026-03-15</span></div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- 06. BUTTONS                                                  -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <section class="section">
+    <div class="section-header">
+      <h2>06 — Buttons</h2>
+      <span class="section-meta">4 variants × 3 sizes</span>
+    </div>
+    <div class="panel">
+      <div class="demo-row">
+        <span class="demo-label">Primary</span>
+        <button class="btn btn-primary btn-sm">Save</button>
+        <button class="btn btn-primary">Save Worksheet</button>
+        <button class="btn btn-primary btn-lg">Generate BowTie</button>
+      </div>
+      <div class="demo-row">
+        <span class="demo-label">Secondary</span>
+        <button class="btn btn-secondary btn-sm">Cancel</button>
+        <button class="btn btn-secondary">Export PDF</button>
+        <button class="btn btn-secondary btn-lg">Import CSV</button>
+      </div>
+      <div class="demo-row">
+        <span class="demo-label">Ghost</span>
+        <button class="btn btn-ghost btn-sm">Dismiss</button>
+        <button class="btn btn-ghost">View details</button>
+        <button class="btn btn-ghost btn-lg">More options</button>
+      </div>
+      <div class="demo-row">
+        <span class="demo-label">Destructive</span>
+        <button class="btn btn-destructive btn-sm">Delete</button>
+        <button class="btn btn-destructive">Reject Action</button>
+        <button class="btn btn-destructive btn-lg">Delete Project</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- 07. FORMS                                                    -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <section class="section">
+    <div class="section-header">
+      <h2>07 — Form Controls</h2>
+      <span class="section-meta">Input · Label · Validation</span>
+    </div>
+    <div class="panel">
+      <div class="group" style="max-width:500px">
+        <label class="label label-required">Project Code</label>
+        <input class="input" type="text" value="PROJ-2026-017" style="font-family:'JetBrains Mono',monospace">
+      </div>
+      <div class="group" style="max-width:500px">
+        <label class="label label-required">Severity (1-5)</label>
+        <input class="input input-error" type="number" value="7" style="width:120px;font-family:'JetBrains Mono',monospace">
+        <div class="error-text">Severity must be between 1 and 5.</div>
+      </div>
+      <div class="group">
+        <label class="label">Deviation Description</label>
+        <input class="input" type="text" placeholder="e.g., No Flow, More Pressure, Reverse Flow" style="width:100%;max-width:500px">
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- 08. HAZOP WORKSHEET PREVIEW                                  -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <section class="section">
+    <div class="section-header">
+      <h2>08 — HAZOP Worksheet (preview)</h2>
+      <span class="section-meta">Density-first tabular</span>
+    </div>
+    <div class="panel" style="padding:0;overflow-x:auto">
+      <table class="hazop-table">
+        <thead>
+          <tr>
+            <th class="col-num">#</th>
+            <th>Parameter</th>
+            <th>Guide</th>
+            <th>Deviation</th>
+            <th>Cause</th>
+            <th>Consequence</th>
+            <th style="text-align:center">S</th>
+            <th style="text-align:center">L</th>
+            <th style="text-align:center">Risk</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="col-num">1</td>
+            <td>Flow</td>
+            <td>No</td>
+            <td style="font-weight:500">No Flow</td>
+            <td style="color:var(--n600)">Pump P-101 trip, power failure</td>
+            <td style="color:var(--n600)">Reactor underfeed, runaway reaction</td>
+            <td style="text-align:center;font-family:'JetBrains Mono',monospace">4</td>
+            <td style="text-align:center;font-family:'JetBrains Mono',monospace">3</td>
+            <td style="text-align:center"><span class="risk-badge risk-high"><svg class="risk-icon" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/></svg>12</span></td>
+            <td><span class="chip chip-open"><span class="chip-dot"></span>Open</span></td>
+          </tr>
+          <tr>
+            <td class="col-num">2</td>
+            <td>Flow</td>
+            <td>More</td>
+            <td style="font-weight:500">High Flow</td>
+            <td style="color:var(--n600)">Control valve FCV-102 fails open</td>
+            <td style="color:var(--n600)">Level rise, vessel overpressure</td>
+            <td style="text-align:center;font-family:'JetBrains Mono',monospace">5</td>
+            <td style="text-align:center;font-family:'JetBrains Mono',monospace">4</td>
+            <td style="text-align:center"><span class="risk-badge risk-extreme"><svg class="risk-icon" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/></svg>20</span></td>
+            <td><span class="chip chip-inprogress"><span class="chip-dot"></span>In Progress</span></td>
+          </tr>
+          <tr>
+            <td class="col-num">3</td>
+            <td>Pressure</td>
+            <td>More</td>
+            <td style="font-weight:500">High Pressure</td>
+            <td style="color:var(--n600)">Blocked outlet, PSV plugged</td>
+            <td style="color:var(--n600)">Vessel rupture, toxic release</td>
+            <td style="text-align:center;font-family:'JetBrains Mono',monospace">5</td>
+            <td style="text-align:center;font-family:'JetBrains Mono',monospace">2</td>
+            <td style="text-align:center"><span class="risk-badge risk-high"><svg class="risk-icon" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/></svg>10</span></td>
+            <td><span class="chip chip-review"><span class="chip-dot"></span>Under Review</span></td>
+          </tr>
+          <tr>
+            <td class="col-num">4</td>
+            <td>Temp</td>
+            <td>Less</td>
+            <td style="font-weight:500">Low Temperature</td>
+            <td style="color:var(--n600)">Heater E-101 trip</td>
+            <td style="color:var(--n600)">Poor reaction conversion</td>
+            <td style="text-align:center;font-family:'JetBrains Mono',monospace">2</td>
+            <td style="text-align:center;font-family:'JetBrains Mono',monospace">3</td>
+            <td style="text-align:center"><span class="risk-badge risk-low"><svg class="risk-icon" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>6</span></td>
+            <td><span class="chip chip-closed"><span class="chip-dot"></span>Closed</span></td>
+          </tr>
+          <tr>
+            <td class="col-num">5</td>
+            <td>Level</td>
+            <td>More</td>
+            <td style="font-weight:500">High Level</td>
+            <td style="color:var(--n600)">Level controller LC-101 fails</td>
+            <td style="color:var(--n600)">Carryover to downstream equipment</td>
+            <td style="text-align:center;font-family:'JetBrains Mono',monospace">3</td>
+            <td style="text-align:center;font-family:'JetBrains Mono',monospace">3</td>
+            <td style="text-align:center"><span class="risk-badge risk-medium"><svg class="risk-icon" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>9</span></td>
+            <td><span class="chip chip-open"><span class="chip-dot"></span>Open</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- 09. BOWTIE NODES                                             -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <section class="section">
+    <div class="section-header">
+      <h2>09 — BowTie Elements</h2>
+      <span class="section-meta">React Flow custom nodes</span>
+    </div>
+    <div class="bowtie-preview">
+      <div class="bt-node bt-threat">⚠ Pump P-101 trip (power failure)</div>
+      <span style="color:var(--n400)">→</span>
+      <div class="bt-node bt-prev-barrier">🛡 Low-flow alarm FAL-101</div>
+      <span style="color:var(--n400)">→</span>
+      <div class="bt-node bt-topevent">TOP EVENT: Loss of containment</div>
+      <span style="color:var(--n400)">→</span>
+      <div class="bt-node bt-mit-barrier">🛡 ESD Interlock</div>
+      <span style="color:var(--n400)">→</span>
+      <div class="bt-node bt-consequence">🔥 Toxic release</div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- 10. KANBAN CARDS                                             -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <section class="section">
+    <div class="section-header">
+      <h2>10 — Action Kanban Cards</h2>
+      <span class="section-meta">Priority-indicator left border</span>
+    </div>
+    <div class="panel" style="display:flex;gap:16px;flex-wrap:wrap">
+      <div class="kanban-card kanban-card-critical">
+        <div class="kanban-title">Install high-high alarm on Reactor R-101</div>
+        <div class="kanban-meta">ACT-102 · Kilang A</div>
+        <span class="risk-badge risk-extreme"><svg class="risk-icon" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/></svg>CRITICAL</span>
+        <div class="kanban-footer">
+          <span>👤 Budi S.</span>
+          <span style="color:var(--risk-extreme);font-weight:600">Due Mar 15 · Overdue 2d</span>
+        </div>
+      </div>
+      <div class="kanban-card kanban-card-high">
+        <div class="kanban-title">Review PSV sizing calculation for V-201</div>
+        <div class="kanban-meta">ACT-098 · Kilang A</div>
+        <span class="risk-badge risk-high"><svg class="risk-icon" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/></svg>HIGH</span>
+        <div class="kanban-footer">
+          <span>👤 Sari M.</span>
+          <span>Due Mar 28 · 10 days</span>
+        </div>
+      </div>
+      <div class="kanban-card kanban-card-medium">
+        <div class="kanban-title">Update operating procedure OP-051</div>
+        <div class="kanban-meta">ACT-091 · Kilang A</div>
+        <span class="risk-badge risk-medium"><svg class="risk-icon" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>MEDIUM</span>
+        <div class="kanban-footer">
+          <span>👤 Dani A.</span>
+          <span>Due Apr 5 · 18 days</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- 11. SPACING                                                  -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <section class="section">
+    <div class="section-header">
+      <h2>11 — Spacing Scale</h2>
+      <span class="section-meta">4px base · Kelipatan 4</span>
+    </div>
+    <div class="panel">
+      <div class="spacing-row"><span class="spacing-label">1 · 4px</span><div class="spacing-bar" style="width:4px"></div></div>
+      <div class="spacing-row"><span class="spacing-label">2 · 8px</span><div class="spacing-bar" style="width:8px"></div></div>
+      <div class="spacing-row"><span class="spacing-label">3 · 12px</span><div class="spacing-bar" style="width:12px"></div></div>
+      <div class="spacing-row"><span class="spacing-label">4 · 16px (default)</span><div class="spacing-bar" style="width:16px"></div></div>
+      <div class="spacing-row"><span class="spacing-label">6 · 24px</span><div class="spacing-bar" style="width:24px"></div></div>
+      <div class="spacing-row"><span class="spacing-label">8 · 32px</span><div class="spacing-bar" style="width:32px"></div></div>
+      <div class="spacing-row"><span class="spacing-label">12 · 48px</span><div class="spacing-bar" style="width:48px"></div></div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- 12. SHADOWS                                                  -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <section class="section">
+    <div class="section-header">
+      <h2>12 — Elevation</h2>
+      <span class="section-meta">Sparse use · purposeful</span>
+    </div>
+    <div class="shadow-demo">
+      <div class="shadow-box shadow-sm">shadow-sm</div>
+      <div class="shadow-box shadow-default">shadow</div>
+      <div class="shadow-box shadow-md">shadow-md</div>
+      <div class="shadow-box shadow-lg">shadow-lg</div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- 13. NAV SIDEBAR                                              -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <section class="section">
+    <div class="section-header">
+      <h2>13 — Sidebar Navigation</h2>
+      <span class="section-meta">Compact · Active state</span>
+    </div>
+    <div class="panel">
+      <div class="nav-demo">
+        <div style="font-size:11px;font-weight:600;color:var(--n500);text-transform:uppercase;letter-spacing:0.04em;padding:6px 10px;margin-bottom:4px">Project</div>
+        <div class="nav-item">📋 Overview</div>
+        <div class="nav-item active">📊 HAZOP Worksheet <span class="nav-count">147</span></div>
+        <div class="nav-item">🔀 BowTie Diagrams <span class="nav-count">12</span></div>
+        <div class="nav-item">✓ Actions <span class="nav-count">89</span></div>
+        <div class="nav-item">📄 Reports</div>
+        <div style="font-size:11px;font-weight:600;color:var(--n500);text-transform:uppercase;letter-spacing:0.04em;padding:6px 10px;margin:12px 0 4px">Library</div>
+        <div class="nav-item">📚 Causes</div>
+        <div class="nav-item">🛡 Safeguards</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- 14. KEYBOARD SHORTCUTS                                       -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <section class="section">
+    <div class="section-header">
+      <h2>14 — Keyboard Shortcuts</h2>
+      <span class="section-meta">Power-user first</span>
+    </div>
+    <div class="panel">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
+        <div><span class="kbd">Tab</span> <span class="kbd">⇧</span>+<span class="kbd">Tab</span> <span style="color:var(--n600);margin-left:8px">Next / previous cell</span></div>
+        <div><span class="kbd">↵</span> <span style="color:var(--n600);margin-left:8px">Commit + move down</span></div>
+        <div><span class="kbd">Esc</span> <span style="color:var(--n600);margin-left:8px">Cancel edit</span></div>
+        <div><span class="kbd">⌘</span>+<span class="kbd">D</span> <span style="color:var(--n600);margin-left:8px">Duplicate row</span></div>
+        <div><span class="kbd">⌘</span>+<span class="kbd">K</span> <span style="color:var(--n600);margin-left:8px">Library search</span></div>
+        <div><span class="kbd">⌘</span>+<span class="kbd">⇧</span>+<span class="kbd">A</span> <span style="color:var(--n600);margin-left:8px">Add new row</span></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    IRMS Design System v1.0 · Industrial Precision · Referenced by SRS v1.1 (Go + Vite)
+  </footer>
+</div>
+</body>
+</html>

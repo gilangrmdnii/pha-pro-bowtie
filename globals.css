@@ -1,0 +1,379 @@
+/**
+ * IRMS Design System — Global Styles
+ * 
+ * Ini file utama untuk semua design tokens (CSS variables).
+ * Import di src/main.tsx:   import './styles/globals.css'
+ * 
+ * Struktur:
+ *   1. Font loading
+ *   2. Tailwind directives
+ *   3. Base layer — CSS variables (light + dark mode)
+ *   4. Base layer — element defaults (body, scrollbar, selection)
+ *   5. Components layer — shared utility classes
+ *   6. Utilities layer — risk patterns (color-blind mode)
+ *   7. Print styles
+ */
+
+/* ── 1. FONT LOADING ─────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+/* ── 2. TAILWIND DIRECTIVES ──────────────────────────────────── */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── 3. DESIGN TOKENS ────────────────────────────────────────── */
+@layer base {
+  :root {
+    /* ─ shadcn/ui base tokens ─────────────────────────────── */
+    --background: 210 40% 98%;                   /* neutral-50 */
+    --foreground: 222 47% 11%;                   /* neutral-800 */
+
+    --card: 0 0% 100%;                           /* white */
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 221 83% 42%;                      /* brand-600 */
+    --primary-foreground: 0 0% 100%;             /* white */
+
+    --secondary: 210 40% 96%;                    /* neutral-100 */
+    --secondary-foreground: 215 25% 27%;         /* neutral-700 */
+
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;             /* neutral-500 */
+
+    --accent: 210 40% 96%;
+    --accent-foreground: 215 25% 27%;
+
+    --destructive: 0 73% 42%;                    /* risk-extreme */
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 32% 91%;                       /* neutral-200 */
+    --input: 214 32% 91%;
+    --ring: 217 91% 50%;                         /* brand-500 */
+
+    --radius: 0.25rem;                           /* 4px — IRMS industrial default */
+
+    /* ─ RISK SEVERITY ─────────────────────────────────────── */
+    --risk-low: 142 76% 36%;                     /* #16A34A */
+    --risk-low-fg: 0 0% 100%;
+    --risk-low-bg: 142 76% 95%;                  /* #DCFCE7 */
+
+    --risk-medium: 38 92% 50%;                   /* #F59E0B */
+    --risk-medium-fg: 24 10% 10%;                /* near-black */
+    --risk-medium-bg: 48 96% 89%;                /* #FEF3C7 */
+
+    --risk-high: 20 90% 48%;                     /* #EA580C */
+    --risk-high-fg: 0 0% 100%;
+    --risk-high-bg: 33 100% 92%;                 /* #FED7AA */
+
+    --risk-extreme: 0 73% 42%;                   /* #B91C1C */
+    --risk-extreme-fg: 0 0% 100%;
+    --risk-extreme-bg: 0 93% 94%;                /* #FEE2E2 */
+
+    /* ─ ACTION STATUS ─────────────────────────────────────── */
+    --status-open: 200 98% 39%;                  /* sky-600 */
+    --status-in-progress: 38 92% 50%;            /* amber-500 */
+    --status-review: 270 91% 50%;                /* purple-600 */
+    --status-closed: 142 76% 36%;                /* green-600 */
+    --status-rejected: 215 16% 47%;              /* neutral-500 */
+
+    /* ─ BOWTIE ELEMENTS ───────────────────────────────────── */
+    --bowtie-threat: 0 73% 42%;
+    --bowtie-topevent: 222 47% 11%;
+    --bowtie-barrier-preventive: 221 83% 42%;
+    --bowtie-barrier-mitigative: 142 76% 36%;
+    --bowtie-consequence: 20 90% 48%;
+    --bowtie-escalation: 38 92% 50%;
+  }
+
+  /* ─── DARK MODE ──────────────────────────────────────────── */
+  /* Phase 2 delivery — keeping tokens inverted for forward-compat */
+  .dark {
+    --background: 222 47% 7%;
+    --foreground: 210 40% 98%;
+
+    --card: 217 33% 12%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 217 33% 12%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 217 91% 60%;
+    --primary-foreground: 222 47% 11%;
+
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 73% 52%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 217 91% 60%;
+
+    /* Risk colors lebih vibrant di dark mode untuk contrast */
+    --risk-low: 142 71% 50%;
+    --risk-low-bg: 142 70% 15%;
+
+    --risk-medium: 38 92% 60%;
+    --risk-medium-bg: 38 70% 15%;
+
+    --risk-high: 20 90% 58%;
+    --risk-high-bg: 20 70% 15%;
+
+    --risk-extreme: 0 84% 60%;
+    --risk-extreme-bg: 0 70% 15%;
+  }
+}
+
+/* ── 4. ELEMENT DEFAULTS ─────────────────────────────────────── */
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    /* Ensure text rendering is crisp */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans text-sm;
+    /* Inter feature settings — industrial precision */
+    font-feature-settings: "cv11", "ss01", "ss03", "tnum";
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Headings — tight tracking, clear hierarchy */
+  h1 { @apply text-3xl font-bold tracking-tight; }
+  h2 { @apply text-2xl font-semibold tracking-tight; }
+  h3 { @apply text-xl font-semibold; }
+  h4 { @apply text-lg font-semibold; }
+  h5 { @apply text-base font-semibold; }
+  h6 { @apply text-sm font-semibold uppercase tracking-wide; }
+
+  /* Monospace for data fields (IDs, codes, numerics in forms) */
+  code, pre, kbd, samp {
+    @apply font-mono text-[0.9em];
+  }
+
+  /* Selection — branded, not OS default */
+  ::selection {
+    background-color: hsl(var(--primary) / 0.2);
+    color: hsl(var(--foreground));
+  }
+
+  /* Scrollbar — thin, subtle (not OS default which is ugly on Windows) */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 6px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+    background-clip: padding-box;
+    border: 2px solid transparent;
+  }
+
+  /* Focus visible — consistent across app */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  /* Disabled state — consistent dim */
+  [disabled],
+  [aria-disabled="true"] {
+    @apply cursor-not-allowed opacity-50;
+  }
+}
+
+/* ── 5. SHARED COMPONENT UTILITIES ───────────────────────────── */
+@layer components {
+  /* ─── Data Cell (for HAZOP worksheet) ─────────────────── */
+  .data-cell {
+    @apply h-10 px-3 align-middle text-sm text-foreground tabular-nums
+           border-b border-r border-border;
+  }
+
+  .data-cell-header {
+    @apply h-9 px-3 text-left text-xs font-semibold uppercase tracking-wide
+           text-muted-foreground bg-muted border-b-2 border-border;
+  }
+
+  .data-cell-sticky {
+    @apply sticky left-0 bg-card z-10;
+  }
+
+  /* ─── Card (override shadcn untuk tighter density) ────── */
+  .card-dense {
+    @apply rounded border border-border bg-card p-4;
+  }
+
+  /* ─── Section title (used on dashboard panels) ───────── */
+  .section-title {
+    @apply text-xs font-semibold uppercase tracking-wider text-muted-foreground;
+  }
+
+  /* ─── Keyboard shortcut hint ─────────────────────────── */
+  .kbd {
+    @apply inline-flex h-5 min-w-[20px] items-center justify-center rounded-sm
+           border border-border bg-muted px-1 font-mono text-[10px] font-medium
+           text-muted-foreground;
+  }
+
+  /* ─── Skeleton shimmer ───────────────────────────────── */
+  .skeleton {
+    @apply animate-pulse rounded bg-muted;
+  }
+
+  /* ─── Nav item (sidebar) ─────────────────────────────── */
+  .nav-item {
+    @apply flex items-center gap-2 rounded px-2.5 py-1.5 text-sm font-medium
+           text-muted-foreground transition-colors duration-150
+           hover:bg-accent hover:text-accent-foreground
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+  }
+
+  .nav-item-active {
+    @apply bg-brand-50 text-brand-700;
+  }
+
+  .dark .nav-item-active {
+    @apply bg-brand-950 text-brand-200;
+  }
+}
+
+/* ── 6. RISK PATTERN OVERLAYS (color-blind mode) ─────────────── */
+@layer utilities {
+  /* Toggle via .colorblind-mode class on <html> or <body> */
+  .colorblind-mode .pattern-low {
+    background-image: repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 4px,
+      rgba(255, 255, 255, 0.3) 4px,
+      rgba(255, 255, 255, 0.3) 6px
+    );
+  }
+
+  .colorblind-mode .pattern-medium {
+    background-image: radial-gradient(
+      circle,
+      rgba(0, 0, 0, 0.18) 1.2px,
+      transparent 1.2px
+    );
+    background-size: 6px 6px;
+  }
+
+  .colorblind-mode .pattern-high {
+    background-image:
+      repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 4px,
+        rgba(255, 255, 255, 0.25) 4px,
+        rgba(255, 255, 255, 0.25) 5px
+      ),
+      repeating-linear-gradient(
+        -45deg,
+        transparent,
+        transparent 4px,
+        rgba(255, 255, 255, 0.25) 4px,
+        rgba(255, 255, 255, 0.25) 5px
+      );
+  }
+
+  .colorblind-mode .pattern-extreme {
+    background-image: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(255, 255, 255, 0.35) 3px,
+      rgba(255, 255, 255, 0.35) 4px
+    );
+  }
+
+  /* Tabular numerics shortcut */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* No tap highlight on mobile (we control focus styles) */
+  .no-tap {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* ── 7. PRINT STYLES ─────────────────────────────────────────── */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  .print-hidden {
+    display: none !important;
+  }
+
+  .print-break-before {
+    page-break-before: always;
+  }
+
+  .print-avoid-break {
+    page-break-inside: avoid;
+  }
+
+  /* Preserve risk colors in print */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    box-shadow: none !important;
+  }
+
+  /* Borders solid hitam saat print */
+  table,
+  th,
+  td {
+    border-color: black !important;
+  }
+
+  /* Hide interactive-only elements */
+  button[aria-label*="close"],
+  button[aria-label*="dismiss"],
+  .sidebar,
+  .topbar,
+  .toolbar {
+    display: none !important;
+  }
+}
+
+/* ── 8. REDUCED MOTION ───────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
